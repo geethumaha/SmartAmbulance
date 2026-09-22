@@ -1,0 +1,20 @@
+.connection-button {
+  margin-top: 25px;
+  padding: 12px 24px;
+  border: none;
+  border-radius: 8px;
+  background: #0f6fae;
+  color: white;
+  font-size: 16px;
+  cursor: pointer;
+}
+
+.connection-button:hover {
+  background: #095781;
+}
+
+.backend-status {
+  margin-top: 15px;
+  font-weight: bold;
+  color: #15803d;
+}
