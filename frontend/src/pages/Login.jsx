@@ -3,6 +3,8 @@ import axios from "axios";
 
 import AmbulanceDashboard from "./AmbulanceDashboard";
 import PoliceDashboard from "./PoliceDashboard";
+import HospitalDashboard from "./HospitalDashboard";
+import AdminDashboard from "./AdminDashboard";
 
 
 function Login({ role }) {
@@ -14,6 +16,10 @@ function Login({ role }) {
 
   const [loggedIn, setLoggedIn] = useState(false);
 
+
+  // ==========================================
+  // LOGIN
+  // ==========================================
 
   const handleLogin = async (e) => {
 
@@ -42,8 +48,9 @@ function Login({ role }) {
       );
 
 
-      // Check that the selected login
-      // matches the user's actual role.
+      // ========================================
+      // CHECK SELECTED ROLE
+      // ========================================
 
       if (
         response.data.user.role !== role
@@ -94,115 +101,176 @@ function Login({ role }) {
   };
 
 
-  // =====================================
-  // OPEN CORRECT DASHBOARD
-  // =====================================
+  // ==========================================
+  // OPEN DASHBOARD
+  // ==========================================
 
   if (loggedIn) {
-
-    if (role === "police") {
-
-      return <PoliceDashboard />;
-
-    }
 
 
     if (role === "ambulance") {
 
-      return <AmbulanceDashboard />;
+      return (
+        <AmbulanceDashboard />
+      );
+
+    }
+
+
+    if (role === "police") {
+
+      return (
+        <PoliceDashboard />
+      );
+
+    }
+
+
+    if (role === "hospital") {
+
+      return (
+        <HospitalDashboard />
+      );
+
+    }
+
+
+    if (role === "admin") {
+
+      return (
+        <AdminDashboard />
+      );
 
     }
 
   }
 
 
+  // ==========================================
+  // ROLE INFORMATION
+  // ==========================================
+
+  const roleInfo = {
+
+    ambulance: {
+      icon: "🚑",
+      title: "Ambulance Login"
+    },
+
+    police: {
+      icon: "👮",
+      title: "Traffic Police Login"
+    },
+
+    hospital: {
+      icon: "🏥",
+      title: "Hospital Login"
+    },
+
+    admin: {
+      icon: "👨‍💼",
+      title: "Administrator Login"
+    }
+
+  };
+
+
+  const currentRole =
+    roleInfo[role] ||
+    roleInfo.ambulance;
+
+
+  // ==========================================
+  // LOGIN PAGE
+  // ==========================================
+
   return (
 
-    <div style={styles.container}>
+    <div
+      style={styles.container}
+    >
 
-      <div style={styles.loginBox}>
+      <div
+        style={styles.loginBox}
+      >
 
 
-        <div style={styles.icon}>
+        <div
+          style={styles.icon}
+        >
 
-          {role === "police"
-            ? "👮"
-            : "🚑"}
+          {currentRole.icon}
 
         </div>
 
 
-        <h1 style={styles.title}>
+        <h1
+          style={styles.title}
+        >
 
           Smart Ambulance
 
         </h1>
 
 
-        <p style={styles.subtitle}>
+        <p
+          style={styles.subtitle}
+        >
 
           Emergency Coordination System
 
         </p>
 
 
-        <h2 style={styles.heading}>
+        <h2
+          style={styles.heading}
+        >
 
-          {role === "police"
-            ? "Traffic Police Login"
-            : "Ambulance Login"}
+          {currentRole.title}
 
         </h2>
 
 
-        <form onSubmit={handleLogin}>
+        <form
+          onSubmit={handleLogin}
+        >
 
 
-          <label style={styles.label}>
+          <label
+            style={styles.label}
+          >
             Email
           </label>
 
 
           <input
-
             type="email"
-
             placeholder="Enter your email"
-
             value={email}
-
             onChange={(e) =>
               setEmail(e.target.value)
             }
-
             style={styles.input}
-
             required
-
           />
 
 
-          <label style={styles.label}>
+          <label
+            style={styles.label}
+          >
             Password
           </label>
 
 
           <input
-
             type="password"
-
             placeholder="Enter your password"
-
             value={password}
-
             onChange={(e) =>
               setPassword(e.target.value)
             }
-
             style={styles.input}
-
             required
-
           />
 
 
@@ -246,6 +314,10 @@ function Login({ role }) {
 
 }
 
+
+// ==========================================
+// STYLES
+// ==========================================
 
 const styles = {
 
@@ -344,7 +416,8 @@ const styles = {
 
     padding: "12px",
 
-    border: "1px solid #ccc",
+    border:
+      "1px solid #ccc",
 
     borderRadius: "7px",
 

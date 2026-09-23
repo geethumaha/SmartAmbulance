@@ -4,9 +4,9 @@ const Trip = require("../models/Trip");
 const router = express.Router();
 
 
-// ======================================
+// ==========================================
 // START EMERGENCY TRIP
-// ======================================
+// ==========================================
 
 router.post("/start", async (req, res) => {
 
@@ -21,8 +21,6 @@ router.post("/start", async (req, res) => {
     } = req.body;
 
 
-    // Check required information
-
     if (
       !ambulanceId ||
       !priority ||
@@ -32,21 +30,20 @@ router.post("/start", async (req, res) => {
     ) {
 
       return res.status(400).json({
-        message: "Missing required trip information"
+        message:
+          "Missing required trip information"
       });
 
     }
 
 
-    // Create trip
-
     const trip = await Trip.create({
 
-      ambulanceId: ambulanceId,
+      ambulanceId,
 
-      priority: priority,
+      priority,
 
-      hospital: hospital,
+      hospital,
 
       startLocation: {
         latitude: Number(latitude),
@@ -58,7 +55,9 @@ router.post("/start", async (req, res) => {
         longitude: Number(longitude)
       },
 
-      status: "ACTIVE"
+      status: "ACTIVE",
+
+      trafficClearance: "PENDING"
 
     });
 
@@ -71,15 +70,15 @@ router.post("/start", async (req, res) => {
 
     res.status(201).json({
 
-      message: "Emergency trip started successfully",
+      message:
+        "Emergency trip started successfully",
 
-      trip: trip
+      trip
 
     });
 
-  }
 
-  catch (error) {
+  } catch (error) {
 
     console.error(
       "START TRIP ERROR:",
@@ -89,7 +88,8 @@ router.post("/start", async (req, res) => {
 
     res.status(500).json({
 
-      message: "Failed to start emergency trip",
+      message:
+        "Failed to start emergency trip",
 
       error: error.message
 
@@ -100,24 +100,146 @@ router.post("/start", async (req, res) => {
 });
 
 
-// ======================================
-// GET ACTIVE EMERGENCY TRIPS
-// ======================================
+
+// ==========================================
+// UPDATE AMBULANCE LOCATION
+// ==========================================
+
+router.put(
+  "/update-location/:tripId",
+  async (req, res) => {
+
+    try {
+
+      const { tripId } = req.params;
+
+      const {
+        latitude,
+        longitude
+      } = req.body;
+
+
+      if (
+        latitude === undefined ||
+        longitude === undefined
+      ) {
+
+        return res.status(400).json({
+
+          message:
+            "Latitude and longitude are required"
+
+        });
+
+      }
+
+
+      const trip =
+        await Trip.findOneAndUpdate(
+
+          {
+            _id: tripId,
+
+            status: "ACTIVE"
+
+          },
+
+          {
+
+            currentLocation: {
+
+              latitude: Number(latitude),
+
+              longitude: Number(longitude)
+
+            }
+
+          },
+
+          {
+            new: true
+          }
+
+        );
+
+
+      if (!trip) {
+
+        return res.status(404).json({
+
+          message:
+            "Active trip not found"
+
+        });
+
+      }
+
+
+      console.log(
+        "Ambulance location updated:",
+        latitude,
+        longitude
+      );
+
+
+      res.status(200).json({
+
+        message:
+          "Ambulance location updated successfully",
+
+        trip
+
+      });
+
+
+    } catch (error) {
+
+      console.error(
+        "UPDATE LOCATION ERROR:",
+        error
+      );
+
+
+      res.status(500).json({
+
+        message:
+          "Failed to update ambulance location",
+
+        error: error.message
+
+      });
+
+    }
+
+  }
+);
+
+
+
+// ==========================================
+// GET ACTIVE TRIPS
+// ==========================================
 
 router.get("/active", async (req, res) => {
 
   try {
 
-    const activeTrips = await Trip.find({
-      status: "ACTIVE"
-    }).sort({
-      startedAt: -1
-    });
+    const activeTrips =
+      await Trip.find({
+
+        status: "ACTIVE"
+
+      }).sort({
+
+        startedAt: -1
+
+      });
 
 
     res.status(200).json({
 
-      message: "Active trips retrieved successfully",
+      message:
+        "Active trips retrieved successfully",
 
       count: activeTrips.length,
 
@@ -125,9 +247,8 @@ router.get("/active", async (req, res) => {
 
     });
 
-  }
 
-  catch (error) {
+  } catch (error) {
 
     console.error(
       "GET ACTIVE TRIPS ERROR:",
@@ -137,7 +258,8 @@ router.get("/active", async (req, res) => {
 
     res.status(500).json({
 
-      message: "Failed to retrieve active trips",
+      message:
+        "Failed to retrieve active trips",
 
       error: error.message
 
@@ -148,77 +270,192 @@ router.get("/active", async (req, res) => {
 });
 
 
-// ======================================
-// END EMERGENCY TRIP
-// ======================================
 
-router.put("/end/:tripId", async (req, res) => {
+// ==========================================
+// UPDATE TRAFFIC CLEARANCE
+// ==========================================
 
-  try {
+router.put(
+  "/clearance/:tripId",
+  async (req, res) => {
 
-    const { tripId } = req.params;
+    try {
+
+      const { tripId } = req.params;
+
+      const { clearance } = req.body;
 
 
-    const trip = await Trip.findByIdAndUpdate(
+      const validStatuses = [
+        "PENDING",
+        "PREPARING",
+        "CLEARED"
+      ];
 
-      tripId,
 
-      {
-        status: "COMPLETED",
-        completedAt: new Date()
-      },
+      if (!validStatuses.includes(clearance)) {
 
-      {
-        new: true
+        return res.status(400).json({
+
+          message:
+            "Invalid traffic clearance status"
+
+        });
+
       }
 
-    );
+
+      const trip =
+        await Trip.findByIdAndUpdate(
+
+          tripId,
+
+          {
+            trafficClearance: clearance
+          },
+
+          {
+            new: true
+          }
+
+        );
 
 
-    if (!trip) {
+      if (!trip) {
 
-      return res.status(404).json({
-        message: "Trip not found"
+        return res.status(404).json({
+
+          message:
+            "Trip not found"
+
+        });
+
+      }
+
+
+      console.log(
+        `Traffic clearance updated: ${trip.ambulanceId} → ${clearance}`
+      );
+
+
+      res.status(200).json({
+
+        message:
+          "Traffic clearance updated successfully",
+
+        trip
+
+      });
+
+
+    } catch (error) {
+
+      console.error(
+        "TRAFFIC CLEARANCE ERROR:",
+        error
+      );
+
+
+      res.status(500).json({
+
+        message:
+          "Failed to update traffic clearance",
+
+        error: error.message
+
       });
 
     }
 
-
-    console.log(
-      "Emergency trip completed:",
-      trip._id
-    );
+  }
+);
 
 
-    res.status(200).json({
 
-      message: "Emergency trip completed successfully",
+// ==========================================
+// END EMERGENCY TRIP
+// ==========================================
 
-      trip: trip
+router.put(
+  "/end/:tripId",
+  async (req, res) => {
 
-    });
+    try {
+
+      const { tripId } = req.params;
+
+
+      const trip =
+        await Trip.findByIdAndUpdate(
+
+          tripId,
+
+          {
+
+            status: "COMPLETED",
+
+            completedAt: new Date()
+
+          },
+
+          {
+
+            new: true
+
+          }
+
+        );
+
+
+      if (!trip) {
+
+        return res.status(404).json({
+
+          message:
+            "Trip not found"
+
+        });
+
+      }
+
+
+      console.log(
+        "Emergency trip completed:",
+        trip._id
+      );
+
+
+      res.status(200).json({
+
+        message:
+          "Emergency trip completed successfully",
+
+        trip
+
+      });
+
+
+    } catch (error) {
+
+      console.error(
+        "END TRIP ERROR:",
+        error
+      );
+
+
+      res.status(500).json({
+
+        message:
+          "Failed to end emergency trip",
+
+        error: error.message
+
+      });
+
+    }
 
   }
-
-  catch (error) {
-
-    console.error(
-      "END TRIP ERROR:",
-      error
-    );
-
-
-    res.status(500).json({
-
-      message: "Failed to end emergency trip",
-
-      error: error.message
-
-    });
-
-  }
-
-});
+);
 
 
 module.exports = router;

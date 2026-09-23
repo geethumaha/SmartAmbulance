@@ -2,15 +2,20 @@ import { useState } from "react";
 import axios from "axios";
 
 import Login from "./pages/Login";
-import PoliceDashboard from "./pages/PoliceDashboard";
 
 import "./App.css";
+
 
 function App() {
 
   const [backendStatus, setBackendStatus] = useState("");
   const [showLogin, setShowLogin] = useState(false);
   const [loginRole, setLoginRole] = useState("");
+
+
+  // ==========================================
+  // TEST BACKEND CONNECTION
+  // ==========================================
 
   const testBackend = async () => {
 
@@ -20,7 +25,9 @@ function App() {
         "http://localhost:5000/"
       );
 
-      setBackendStatus(response.data.message);
+      setBackendStatus(
+        response.data.message
+      );
 
     } catch (error) {
 
@@ -35,6 +42,10 @@ function App() {
   };
 
 
+  // ==========================================
+  // OPEN LOGIN PAGE
+  // ==========================================
+
   const openLogin = (role) => {
 
     setLoginRole(role);
@@ -42,6 +53,10 @@ function App() {
 
   };
 
+
+  // ==========================================
+  // SHOW LOGIN PAGE
+  // ==========================================
 
   if (showLogin) {
 
@@ -54,17 +69,25 @@ function App() {
   }
 
 
+  // ==========================================
+  // HOME PAGE
+  // ==========================================
+
   return (
 
     <div className="app">
 
+
+      {/* ====================================== */}
       {/* HEADER */}
+      {/* ====================================== */}
 
       <header className="header">
 
         <div className="logo">
           🚑
         </div>
+
 
         <div>
 
@@ -81,9 +104,16 @@ function App() {
       </header>
 
 
-      {/* MAIN */}
+      {/* ====================================== */}
+      {/* MAIN CONTENT */}
+      {/* ====================================== */}
 
       <main className="main">
+
+
+        {/* ==================================== */}
+        {/* WELCOME SECTION */}
+        {/* ==================================== */}
 
         <section className="welcome-section">
 
@@ -91,12 +121,17 @@ function App() {
             Welcome to Smart Ambulance
           </h2>
 
+
           <p>
-            A real-time emergency coordination system
-            connecting ambulances, traffic police,
-            hospitals, and administrators.
+            A real-time emergency coordination
+            system connecting ambulances, traffic
+            police, hospitals, and administrators.
           </p>
 
+
+          {/* ================================== */}
+          {/* BACKEND TEST */}
+          {/* ================================== */}
 
           <button
             className="connection-button"
@@ -117,7 +152,9 @@ function App() {
         </section>
 
 
+        {/* ==================================== */}
         {/* ROLE SECTION */}
+        {/* ==================================== */}
 
         <section className="role-section">
 
@@ -129,7 +166,9 @@ function App() {
           <div className="role-container">
 
 
+            {/* ================================= */}
             {/* AMBULANCE */}
+            {/* ================================= */}
 
             <div className="role-card">
 
@@ -137,15 +176,18 @@ function App() {
                 🚑
               </div>
 
+
               <h4>
                 Ambulance
               </h4>
+
 
               <p>
                 Start an emergency trip,
                 share GPS location,
                 and view your route and ETA.
               </p>
+
 
               <button
                 onClick={() =>
@@ -158,7 +200,9 @@ function App() {
             </div>
 
 
-            {/* POLICE */}
+            {/* ================================= */}
+            {/* TRAFFIC POLICE */}
+            {/* ================================= */}
 
             <div className="role-card">
 
@@ -166,15 +210,18 @@ function App() {
                 👮
               </div>
 
+
               <h4>
                 Traffic Police
               </h4>
+
 
               <p>
                 Monitor ambulances,
                 receive junction alerts,
                 and manage traffic priority.
               </p>
+
 
               <button
                 onClick={() =>
@@ -187,7 +234,9 @@ function App() {
             </div>
 
 
+            {/* ================================= */}
             {/* HOSPITAL */}
+            {/* ================================= */}
 
             <div className="role-card">
 
@@ -195,23 +244,32 @@ function App() {
                 🏥
               </div>
 
+
               <h4>
                 Hospital
               </h4>
+
 
               <p>
                 Track incoming ambulances
                 and prepare for emergency arrivals.
               </p>
 
-              <button>
+
+              <button
+                onClick={() =>
+                  openLogin("hospital")
+                }
+              >
                 Hospital Login
               </button>
 
             </div>
 
 
+            {/* ================================= */}
             {/* ADMIN */}
+            {/* ================================= */}
 
             <div className="role-card">
 
@@ -219,9 +277,11 @@ function App() {
                 👨‍💼
               </div>
 
+
               <h4>
                 Administrator
               </h4>
+
 
               <p>
                 Manage users, ambulances,
@@ -229,7 +289,12 @@ function App() {
                 and analytics.
               </p>
 
-              <button>
+
+              <button
+                onClick={() =>
+                  openLogin("admin")
+                }
+              >
                 Admin Login
               </button>
 
@@ -243,7 +308,9 @@ function App() {
       </main>
 
 
+      {/* ====================================== */}
       {/* FOOTER */}
+      {/* ====================================== */}
 
       <footer>
 
@@ -253,6 +320,7 @@ function App() {
         </p>
 
       </footer>
+
 
     </div>
 

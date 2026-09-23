@@ -2,26 +2,26 @@ const mongoose = require("mongoose");
 
 const tripSchema = new mongoose.Schema(
   {
-    // Ambulance that started the trip
     ambulanceId: {
       type: String,
       required: true
     },
 
-    // Emergency priority
     priority: {
       type: String,
-      enum: ["Critical", "Serious", "Moderate"],
+      enum: [
+        "Critical",
+        "Serious",
+        "Moderate"
+      ],
       required: true
     },
 
-    // Destination hospital
     hospital: {
       type: String,
       required: true
     },
 
-    // Starting GPS location
     startLocation: {
       latitude: {
         type: Number,
@@ -34,7 +34,6 @@ const tripSchema = new mongoose.Schema(
       }
     },
 
-    // Current GPS location
     currentLocation: {
       latitude: {
         type: Number,
@@ -47,30 +46,44 @@ const tripSchema = new mongoose.Schema(
       }
     },
 
-    // Trip status
     status: {
       type: String,
-      enum: ["ACTIVE", "COMPLETED"],
+      enum: [
+        "ACTIVE",
+        "COMPLETED"
+      ],
       default: "ACTIVE"
     },
 
-    // Trip start time
+    trafficClearance: {
+      type: String,
+      enum: [
+        "PENDING",
+        "PREPARING",
+        "CLEARED"
+      ],
+      default: "PENDING"
+    },
+
     startedAt: {
       type: Date,
       default: Date.now
     },
 
-    // Trip completion time
     completedAt: {
       type: Date,
       default: null
     }
   },
+
   {
     timestamps: true
   }
 );
 
-const Trip = mongoose.model("Trip", tripSchema);
+const Trip = mongoose.model(
+  "Trip",
+  tripSchema
+);
 
 module.exports = Trip;

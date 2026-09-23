@@ -1,12 +1,8 @@
 import { useEffect, useState } from "react";
 import axios from "axios";
 
-import PoliceMap from "../components/PoliceMap";
-import JunctionAlerts from "../components/JunctionAlerts";
-import TrafficSignal from "../components/TrafficSignal";
 
-
-function PoliceDashboard() {
+function HospitalDashboard() {
 
   const [trips, setTrips] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -16,7 +12,7 @@ function PoliceDashboard() {
   // FETCH ACTIVE AMBULANCES
   // ==========================================
 
-  const fetchActiveTrips = async () => {
+  const fetchIncomingAmbulances = async () => {
 
     try {
 
@@ -24,18 +20,21 @@ function PoliceDashboard() {
         "http://localhost:5000/api/trips/active"
       );
 
+
       setTrips(
         response.data.trips || []
       );
+
 
       setLoading(false);
 
     } catch (error) {
 
       console.error(
-        "Failed to fetch active trips:",
+        "Failed to fetch incoming ambulances:",
         error
       );
+
 
       setLoading(false);
 
@@ -45,17 +44,18 @@ function PoliceDashboard() {
 
 
   // ==========================================
-  // LOAD DATA + REFRESH EVERY 5 SECONDS
+  // LOAD + REFRESH EVERY 5 SECONDS
   // ==========================================
 
   useEffect(() => {
 
-    fetchActiveTrips();
+    fetchIncomingAmbulances();
+
 
     const interval =
       setInterval(() => {
 
-        fetchActiveTrips();
+        fetchIncomingAmbulances();
 
       }, 5000);
 
@@ -69,20 +69,6 @@ function PoliceDashboard() {
   }, []);
 
 
-  // ==========================================
-  // CHECK EMERGENCY PRIORITY
-  // ==========================================
-
-  const emergencyActive =
-    trips.some(
-      (trip) =>
-        trip.trafficClearance ===
-          "PREPARING" ||
-        trip.trafficClearance ===
-          "CLEARED"
-    );
-
-
   return (
 
     <div
@@ -94,6 +80,7 @@ function PoliceDashboard() {
         paddingBottom: "40px"
       }}
     >
+
 
       {/* ===================================== */}
       {/* HEADER */}
@@ -116,7 +103,7 @@ function PoliceDashboard() {
             fontSize: "45px"
           }}
         >
-          👮
+          🏥
         </div>
 
 
@@ -128,7 +115,7 @@ function PoliceDashboard() {
               color: "#1e3a5f"
             }}
           >
-            Traffic Police Dashboard
+            Hospital Dashboard
           </h1>
 
 
@@ -138,8 +125,7 @@ function PoliceDashboard() {
               color: "#64748b"
             }}
           >
-            Smart Ambulance Emergency
-            Coordination
+            Emergency Ambulance Coordination
           </p>
 
         </div>
@@ -149,7 +135,7 @@ function PoliceDashboard() {
 
       <main
         style={{
-          maxWidth: "1500px",
+          maxWidth: "1400px",
           margin: "30px auto",
           padding: "0 25px"
         }}
@@ -157,7 +143,7 @@ function PoliceDashboard() {
 
 
         {/* ===================================== */}
-        {/* SUMMARY CARDS */}
+        {/* SUMMARY */}
         {/* ===================================== */}
 
         <div
@@ -170,19 +156,20 @@ function PoliceDashboard() {
           }}
         >
 
+
           <div style={cardStyle}>
 
-            <div style={cardIconStyle}>
+            <div style={iconStyle}>
               🚑
             </div>
 
             <div>
 
-              <p style={cardLabelStyle}>
-                Active Ambulances
+              <p style={labelStyle}>
+                Incoming Ambulances
               </p>
 
-              <h2 style={cardValueStyle}>
+              <h2 style={valueStyle}>
                 {trips.length}
               </h2>
 
@@ -193,18 +180,22 @@ function PoliceDashboard() {
 
           <div style={cardStyle}>
 
-            <div style={cardIconStyle}>
+            <div style={iconStyle}>
               🚨
             </div>
 
             <div>
 
-              <p style={cardLabelStyle}>
-                Emergency Trips
+              <p style={labelStyle}>
+                Emergency Cases
               </p>
 
-              <h2 style={cardValueStyle}>
-                {trips.length}
+              <h2 style={valueStyle}>
+                {trips.filter(
+                  (trip) =>
+                    trip.priority ===
+                    "Critical"
+                ).length}
               </h2>
 
             </div>
@@ -214,45 +205,24 @@ function PoliceDashboard() {
 
           <div style={cardStyle}>
 
-            <div style={cardIconStyle}>
-              🚦
+            <div style={iconStyle}>
+              🛏️
             </div>
 
             <div>
 
-              <p style={cardLabelStyle}>
-                Junction Alerts
-              </p>
-
-              <h2 style={cardValueStyle}>
-                {trips.length}
-              </h2>
-
-            </div>
-
-          </div>
-
-
-          <div style={cardStyle}>
-
-            <div style={cardIconStyle}>
-              🟢
-            </div>
-
-            <div>
-
-              <p style={cardLabelStyle}>
-                System Status
+              <p style={labelStyle}>
+                Preparation Status
               </p>
 
               <h2
                 style={{
-                  ...cardValueStyle,
-                  color: "#15803d",
-                  fontSize: "20px"
+                  ...valueStyle,
+                  fontSize: "20px",
+                  color: "#15803d"
                 }}
               >
-                ONLINE
+                READY
               </h2>
 
             </div>
@@ -263,7 +233,7 @@ function PoliceDashboard() {
 
 
         {/* ===================================== */}
-        {/* ACTIVE AMBULANCES */}
+        {/* INCOMING AMBULANCES */}
         {/* ===================================== */}
 
         <section
@@ -282,21 +252,21 @@ function PoliceDashboard() {
               color: "#1e3a5f"
             }}
           >
-            🚑 Active Ambulances
+            🚑 Incoming Emergency Ambulances
           </h2>
 
 
           {loading ? (
 
             <p>
-              Loading active ambulances...
+              Loading incoming ambulances...
             </p>
 
           ) : trips.length === 0 ? (
 
             <div
               style={{
-                padding: "25px",
+                padding: "30px",
                 background:
                   "#f8fafc",
                 borderRadius: "10px",
@@ -304,8 +274,10 @@ function PoliceDashboard() {
                 color: "#64748b"
               }}
             >
-              No active ambulances
+
+              🏥 No incoming ambulances
               currently.
+
             </div>
 
           ) : (
@@ -324,6 +296,11 @@ function PoliceDashboard() {
                     "#fbfdff"
                 }}
               >
+
+
+                {/* ================================= */}
+                {/* AMBULANCE HEADER */}
+                {/* ================================= */}
 
                 <div
                   style={{
@@ -348,13 +325,14 @@ function PoliceDashboard() {
                       {trip.ambulanceId}
                     </h2>
 
+
                     <p
                       style={{
                         color: "#64748b"
                       }}
                     >
-                      Trip ID:{" "}
-                      {trip._id}
+                      Emergency ambulance
+                      incoming
                     </p>
 
                   </div>
@@ -390,20 +368,31 @@ function PoliceDashboard() {
                 </div>
 
 
+                {/* ================================= */}
+                {/* DETAILS */}
+                {/* ================================= */}
+
                 <div
                   style={{
                     display: "grid",
                     gridTemplateColumns:
                       "repeat(auto-fit, minmax(220px, 1fr))",
                     gap: "20px",
-                    marginTop: "20px"
+                    marginTop: "25px"
                   }}
                 >
 
-                  <div>
+                  <div
+                    style={{
+                      background:
+                        "#f8fafc",
+                      padding: "18px",
+                      borderRadius: "10px"
+                    }}
+                  >
 
                     <strong>
-                      🏥 Hospital
+                      🏥 Destination
                     </strong>
 
                     <p>
@@ -413,10 +402,17 @@ function PoliceDashboard() {
                   </div>
 
 
-                  <div>
+                  <div
+                    style={{
+                      background:
+                        "#f8fafc",
+                      padding: "18px",
+                      borderRadius: "10px"
+                    }}
+                  >
 
                     <strong>
-                      📍 Location
+                      📍 Current Location
                     </strong>
 
                     <p>
@@ -428,10 +424,17 @@ function PoliceDashboard() {
                   </div>
 
 
-                  <div>
+                  <div
+                    style={{
+                      background:
+                        "#f8fafc",
+                      padding: "18px",
+                      borderRadius: "10px"
+                    }}
+                  >
 
                     <strong>
-                      🚦 Clearance
+                      🚦 Traffic Status
                     </strong>
 
                     <p
@@ -444,6 +447,7 @@ function PoliceDashboard() {
                               "PREPARING"
                             ? "#ca8a04"
                             : "#64748b",
+
                         fontWeight:
                           "bold"
                       }}
@@ -454,25 +458,66 @@ function PoliceDashboard() {
 
                   </div>
 
+
+                  <div
+                    style={{
+                      background:
+                        "#f8fafc",
+                      padding: "18px",
+                      borderRadius: "10px"
+                    }}
+                  >
+
+                    <strong>
+                      🟢 Trip Status
+                    </strong>
+
+                    <p
+                      style={{
+                        color: "#15803d",
+                        fontWeight:
+                          "bold"
+                      }}
+                    >
+                      ACTIVE
+                    </p>
+
+                  </div>
+
                 </div>
 
 
+                {/* ================================= */}
+                {/* PREPARATION ALERT */}
+                {/* ================================= */}
+
                 <div
                   style={{
-                    marginTop: "15px",
-                    padding: "15px",
+                    marginTop: "20px",
+                    padding: "18px",
                     background:
-                      "#fff7ed",
-                    borderRadius: "8px",
-                    color: "#c2410c",
-                    fontWeight:
-                      "bold"
+                      "#eff6ff",
+                    borderRadius: "10px",
+                    color: "#1e40af",
+                    fontWeight: "bold"
                   }}
                 >
 
-                  🚨 Ambulance is
-                  currently on an
-                  emergency trip.
+                  🏥 Prepare emergency
+                  resources for incoming
+                  ambulance.
+
+                  <div
+                    style={{
+                      marginTop: "7px",
+                      fontWeight: "normal"
+                    }}
+                  >
+                    Medical team should be
+                    ready before ambulance
+                    arrival.
+
+                  </div>
 
                 </div>
 
@@ -483,84 +528,6 @@ function PoliceDashboard() {
           )}
 
         </section>
-
-
-        {/* ===================================== */}
-        {/* LIVE MAP */}
-        {/* ===================================== */}
-
-        <section
-          style={{
-            background: "white",
-            borderRadius: "15px",
-            padding: "30px",
-            marginTop: "30px",
-            boxShadow:
-              "0 5px 18px rgba(0,0,0,0.08)"
-          }}
-        >
-
-          <h2
-            style={{
-              marginTop: 0,
-              color: "#1e3a5f"
-            }}
-          >
-            🗺️ Live Ambulance Tracking
-          </h2>
-
-
-          {trips.length > 0 ? (
-
-            <PoliceMap
-              trips={trips}
-            />
-
-          ) : (
-
-            <div
-              style={{
-                height: "300px",
-                display: "flex",
-                alignItems:
-                  "center",
-                justifyContent:
-                  "center",
-                background:
-                  "#f8fafc",
-                borderRadius: "12px",
-                color: "#64748b"
-              }}
-            >
-
-              No active ambulance
-              to display.
-
-            </div>
-
-          )}
-
-        </section>
-
-
-        {/* ===================================== */}
-        {/* JUNCTION ALERTS */}
-        {/* ===================================== */}
-
-        <JunctionAlerts
-          trips={trips}
-        />
-
-
-        {/* ===================================== */}
-        {/* TRAFFIC SIGNAL */}
-        {/* ===================================== */}
-
-        <TrafficSignal
-          emergencyActive={
-            emergencyActive
-          }
-        />
 
 
       </main>
@@ -596,14 +563,14 @@ const cardStyle = {
 };
 
 
-const cardIconStyle = {
+const iconStyle = {
 
   fontSize: "40px"
 
 };
 
 
-const cardLabelStyle = {
+const labelStyle = {
 
   margin: 0,
 
@@ -614,7 +581,7 @@ const cardLabelStyle = {
 };
 
 
-const cardValueStyle = {
+const valueStyle = {
 
   margin: "5px 0 0",
 
@@ -625,4 +592,4 @@ const cardValueStyle = {
 };
 
 
-export default PoliceDashboard;
+export default HospitalDashboard;
