@@ -1,35 +1,123 @@
-import { useEffect, useState } from "react";
+import {
+  useEffect,
+  useState,
+  useCallback
+} from "react";
+
 import axios from "axios";
 
 import AmbulanceMap from "../components/AmbulanceMap";
+import RouteMap from "../components/RouteMap";
 
+
+// ==========================================
+// HOSPITAL LOCATIONS
+// ==========================================
+
+const hospitalLocations = {
+
+  "City Hospital": {
+    latitude: 17.3850,
+    longitude: 78.4867
+  },
+
+  "Apollo Hospital": {
+    latitude: 17.4254,
+    longitude: 78.4111
+  },
+
+  "Government General Hospital": {
+    latitude: 17.3895,
+    longitude: 78.4760
+  }
+
+};
+
+
+// ==========================================
+// AMBULANCE DASHBOARD
+// ==========================================
 
 function AmbulanceDashboard() {
 
-  const [tripStarted, setTripStarted] = useState(false);
 
-  const [tripId, setTripId] = useState(null);
+  // ==========================================
+  // TRIP STATE
+  // ==========================================
+
+  const [
+    tripStarted,
+    setTripStarted
+  ] = useState(false);
 
 
-  const [priority, setPriority] =
-    useState("Critical");
+  const [
+    tripId,
+    setTripId
+  ] = useState(null);
 
-  const [hospital, setHospital] =
-    useState("City Hospital");
+
+  // ==========================================
+  // EMERGENCY STATE
+  // ==========================================
+
+  const [
+    priority,
+    setPriority
+  ] = useState("Critical");
 
 
-  const [location, setLocation] = useState({
+  const [
+    hospital,
+    setHospital
+  ] = useState("City Hospital");
+
+
+  // ==========================================
+  // GPS STATE
+  // ==========================================
+
+  const [
+    location,
+    setLocation
+  ] = useState({
     latitude: null,
     longitude: null
   });
 
 
-  const [gpsStatus, setGpsStatus] =
-    useState("Checking GPS...");
+  const [
+    gpsStatus,
+    setGpsStatus
+  ] = useState(
+    "Checking GPS..."
+  );
 
 
-  const [tripMessage, setTripMessage] =
-    useState("");
+  // ==========================================
+  // TRIP MESSAGE
+  // ==========================================
+
+  const [
+    tripMessage,
+    setTripMessage
+  ] = useState("");
+
+
+  // ==========================================
+  // ROUTE INFORMATION
+  // ==========================================
+
+  const [
+    routeDistance,
+    setRouteDistance
+  ] = useState(null);
+
+
+  const [
+    routeTime,
+    setRouteTime
+  ] = useState(null);
 
 
   // ==========================================
@@ -40,7 +128,9 @@ function AmbulanceDashboard() {
 
     if (!navigator.geolocation) {
 
-      setGpsStatus("GPS not supported");
+      setGpsStatus(
+        "GPS not supported"
+      );
 
       return;
 
@@ -63,7 +153,9 @@ function AmbulanceDashboard() {
           });
 
 
-          setGpsStatus("Active");
+          setGpsStatus(
+            "Active"
+          );
 
         },
 
@@ -107,14 +199,16 @@ function AmbulanceDashboard() {
   }, []);
 
 
-
   // ==========================================
   // SEND LIVE LOCATION TO BACKEND
   // ==========================================
 
   useEffect(() => {
 
-    if (!tripStarted || !tripId) {
+    if (
+      !tripStarted ||
+      !tripId
+    ) {
 
       return;
 
@@ -131,44 +225,51 @@ function AmbulanceDashboard() {
     }
 
 
-    const updateLocation = async () => {
+    const updateLocation =
+      async () => {
 
-      try {
+        try {
 
-        await axios.put(
+          await axios.put(
 
-          `http://localhost:5000/api/trips/update-location/${tripId}`,
+            `http://localhost:5000/api/trips/update-location/${tripId}`,
 
-          {
+            {
 
-            latitude:
-              location.latitude,
+              latitude:
+                location.latitude,
 
-            longitude:
-              location.longitude
+              longitude:
+                location.longitude
 
-          }
+            }
 
-        );
-
-
-        console.log(
-          "Live ambulance location sent:",
-          location.latitude,
-          location.longitude
-        );
+          );
 
 
-      } catch (error) {
+          console.log(
 
-        console.error(
-          "Location update error:",
-          error
-        );
+            "Live ambulance location sent:",
 
-      }
+            location.latitude,
 
-    };
+            location.longitude
+
+          );
+
+        } catch (error) {
+
+          console.error(
+
+            "Location update error:",
+
+            error
+
+          );
+
+        }
+
+      };
 
 
     updateLocation();
@@ -181,185 +282,351 @@ function AmbulanceDashboard() {
   ]);
 
 
+  // ==========================================
+  // GET SELECTED HOSPITAL
+  // ==========================================
+
+  const selectedHospital =
+    hospitalLocations[hospital] || null;
+
+
+  // ==========================================
+  // ROUTE FOUND CALLBACK
+  // ==========================================
+
+  const handleRouteFound =
+    useCallback((route) => {
+
+      if (!route) {
+        return;
+      }
+
+
+      setRouteDistance(
+        route.distance
+      );
+
+
+      setRouteTime(
+        route.time
+      );
+
+
+    }, []);
+
+
+  // ==========================================
+  // FORMAT DISTANCE
+  // ==========================================
+
+  const formatDistance =
+    (meters) => {
+
+      if (
+        meters === null ||
+        meters === undefined
+      ) {
+
+        return "Calculating...";
+
+      }
+
+
+      const kilometers =
+        meters / 1000;
+
+
+      if (
+        kilometers < 1
+      ) {
+
+        return `${Math.round(meters)} m`;
+
+      }
+
+
+      return `${kilometers.toFixed(1)} km`;
+
+    };
+
+
+  // ==========================================
+  // FORMAT ETA
+  // ==========================================
+
+  const formatETA =
+    (seconds) => {
+
+      if (
+        seconds === null ||
+        seconds === undefined
+      ) {
+
+        return "Calculating...";
+
+      }
+
+
+      const minutes =
+        Math.round(
+          seconds / 60
+        );
+
+
+      if (
+        minutes < 1
+      ) {
+
+        return "Less than 1 min";
+
+      }
+
+
+      if (
+        minutes === 1
+      ) {
+
+        return "1 minute";
+
+      }
+
+
+      return `${minutes} minutes`;
+
+    };
+
 
   // ==========================================
   // START EMERGENCY TRIP
   // ==========================================
 
-  const startTrip = async () => {
+  const startTrip =
+    async () => {
 
-    setTripMessage("");
-
-
-    // Check GPS
-
-    if (
-      location.latitude === null ||
-      location.longitude === null
-    ) {
-
-      setTripMessage(
-        "❌ GPS location is not available yet"
-      );
-
-      return;
-
-    }
+      setTripMessage("");
 
 
-    try {
+      // CHECK GPS
 
-      const response = await axios.post(
-
-        "http://localhost:5000/api/trips/start",
-
-        {
-
-          ambulanceId:
-            "AMB-001",
-
-          priority:
-            priority,
-
-          hospital:
-            hospital,
-
-          latitude:
-            location.latitude,
-
-          longitude:
-            location.longitude
-
-        }
-
-      );
-
-
-      console.log(
-        "Trip created:",
-        response.data.trip
-      );
-
-
-      // Save trip ID
-
-      setTripId(
-        response.data.trip._id
-      );
-
-
-      // Change trip status
-
-      setTripStarted(true);
-
-
-      setTripMessage(
-        "✅ Emergency trip started successfully"
-      );
-
-
-    } catch (error) {
-
-      console.error(
-        "Start trip error:",
-        error
-      );
-
-
-      if (error.response) {
+      if (
+        location.latitude === null ||
+        location.longitude === null
+      ) {
 
         setTripMessage(
-
-          `❌ ${error.response.data.message}`
-
+          "❌ GPS location is not available yet"
         );
 
-      } else {
-
-        setTripMessage(
-          "❌ Cannot connect to backend"
-        );
+        return;
 
       }
 
-    }
 
-  };
+      try {
 
+        const response =
+          await axios.post(
+
+            "http://localhost:5000/api/trips/start",
+
+            {
+
+              ambulanceId:
+                "AMB-001",
+
+              priority:
+                priority,
+
+              hospital:
+                hospital,
+
+              latitude:
+                location.latitude,
+
+              longitude:
+                location.longitude
+
+            }
+
+          );
+
+
+        console.log(
+
+          "Trip created:",
+
+          response.data.trip
+
+        );
+
+
+        // SAVE TRIP ID
+
+        setTripId(
+          response.data.trip._id
+        );
+
+
+        // START TRIP
+
+        setTripStarted(
+          true
+        );
+
+
+        // RESET ROUTE
+
+        setRouteDistance(
+          null
+        );
+
+
+        setRouteTime(
+          null
+        );
+
+
+        setTripMessage(
+          "✅ Emergency trip started successfully"
+        );
+
+
+      } catch (error) {
+
+        console.error(
+
+          "Start trip error:",
+
+          error
+
+        );
+
+
+        if (
+          error.response
+        ) {
+
+          setTripMessage(
+
+            `❌ ${error.response.data.message}`
+
+          );
+
+        } else {
+
+          setTripMessage(
+            "❌ Cannot connect to backend"
+          );
+
+        }
+
+      }
+
+    };
 
 
   // ==========================================
   // END EMERGENCY TRIP
   // ==========================================
 
-  const stopTrip = async () => {
+  const stopTrip =
+    async () => {
 
-    setTripMessage("");
-
-
-    if (!tripId) {
-
-      setTripStarted(false);
-
-      return;
-
-    }
+      setTripMessage("");
 
 
-    try {
+      if (!tripId) {
 
-      const response = await axios.put(
-
-        `http://localhost:5000/api/trips/end/${tripId}`
-
-      );
-
-
-      console.log(
-        "Trip completed:",
-        response.data.trip
-      );
-
-
-      setTripStarted(false);
-
-      setTripId(null);
-
-
-      setTripMessage(
-        "✅ Emergency trip completed successfully"
-      );
-
-
-    } catch (error) {
-
-      console.error(
-        "End trip error:",
-        error
-      );
-
-
-      if (error.response) {
-
-        setTripMessage(
-
-          `❌ ${error.response.data.message}`
-
+        setTripStarted(
+          false
         );
 
-      } else {
-
-        setTripMessage(
-          "❌ Cannot connect to backend"
-        );
+        return;
 
       }
 
-    }
 
-  };
+      try {
+
+        const response =
+          await axios.put(
+
+            `http://localhost:5000/api/trips/end/${tripId}`
+
+          );
 
 
+        console.log(
+
+          "Trip completed:",
+
+          response.data.trip
+
+        );
+
+
+        setTripStarted(
+          false
+        );
+
+
+        setTripId(
+          null
+        );
+
+
+        setRouteDistance(
+          null
+        );
+
+
+        setRouteTime(
+          null
+        );
+
+
+        setTripMessage(
+          "✅ Emergency trip completed successfully"
+        );
+
+
+      } catch (error) {
+
+        console.error(
+
+          "End trip error:",
+
+          error
+
+        );
+
+
+        if (
+          error.response
+        ) {
+
+          setTripMessage(
+
+            `❌ ${error.response.data.message}`
+
+          );
+
+        } else {
+
+          setTripMessage(
+            "❌ Cannot connect to backend"
+          );
+
+        }
+
+      }
+
+    };
+
+
+  // ==========================================
+  // RENDER
+  // ==========================================
 
   return (
 
@@ -370,23 +637,33 @@ function AmbulanceDashboard() {
           HEADER
       ====================================== */}
 
-      <header style={styles.header}>
+      <header
+        style={styles.header}
+      >
 
-        <div style={styles.headerLeft}>
+        <div
+          style={styles.headerLeft}
+        >
 
-          <div style={styles.logo}>
+          <div
+            style={styles.logo}
+          >
             🚑
           </div>
 
 
           <div>
 
-            <h1 style={styles.title}>
+            <h1
+              style={styles.title}
+            >
               Smart Ambulance
             </h1>
 
 
-            <p style={styles.subtitle}>
+            <p
+              style={styles.subtitle}
+            >
               Ambulance Control Dashboard
             </p>
 
@@ -395,10 +672,13 @@ function AmbulanceDashboard() {
         </div>
 
 
-        <div style={styles.status}>
+        <div
+          style={styles.status}
+        >
 
-          <span style={styles.statusDot}>
-          </span>
+          <span
+            style={styles.statusDot}
+          />
 
           System Online
 
@@ -407,39 +687,42 @@ function AmbulanceDashboard() {
       </header>
 
 
-
-      {/* =====================================
-          MAIN
-      ====================================== */}
-
-      <main style={styles.main}>
+      <main
+        style={styles.main}
+      >
 
 
         {/* =====================================
             WELCOME
         ====================================== */}
 
-        <section style={styles.welcomeCard}>
+        <section
+          style={styles.welcomeCard}
+        >
 
           <div>
 
-            <h2 style={styles.welcomeTitle}>
+            <h2
+              style={styles.welcomeTitle}
+            >
               Welcome, Ambulance Team 🚑
             </h2>
 
 
-            <p style={styles.welcomeText}>
-
+            <p
+              style={styles.welcomeText}
+            >
               Manage your emergency trip,
               GPS location, priority and
               hospital coordination.
-
             </p>
 
           </div>
 
 
-          <div style={styles.ambulanceNumber}>
+          <div
+            style={styles.ambulanceNumber}
+          >
 
             <span>
               Ambulance ID
@@ -455,31 +738,40 @@ function AmbulanceDashboard() {
         </section>
 
 
-
         {/* =====================================
             STAT CARDS
         ====================================== */}
 
-        <section style={styles.statsGrid}>
+        <section
+          style={styles.statsGrid}
+        >
 
 
           {/* GPS */}
 
-          <div style={styles.statCard}>
+          <div
+            style={styles.statCard}
+          >
 
-            <div style={styles.statIcon}>
+            <div
+              style={styles.statIcon}
+            >
               📍
             </div>
 
 
             <div>
 
-              <p style={styles.statLabel}>
+              <p
+                style={styles.statLabel}
+              >
                 GPS Status
               </p>
 
 
-              <h3 style={styles.statValue}>
+              <h3
+                style={styles.statValue}
+              >
                 {gpsStatus}
               </h3>
 
@@ -488,24 +780,31 @@ function AmbulanceDashboard() {
           </div>
 
 
-
           {/* EMERGENCY */}
 
-          <div style={styles.statCard}>
+          <div
+            style={styles.statCard}
+          >
 
-            <div style={styles.statIcon}>
+            <div
+              style={styles.statIcon}
+            >
               🚨
             </div>
 
 
             <div>
 
-              <p style={styles.statLabel}>
+              <p
+                style={styles.statLabel}
+              >
                 Emergency
               </p>
 
 
-              <h3 style={styles.statValue}>
+              <h3
+                style={styles.statValue}
+              >
                 {priority}
               </h3>
 
@@ -514,25 +813,34 @@ function AmbulanceDashboard() {
           </div>
 
 
-
           {/* ETA */}
 
-          <div style={styles.statCard}>
+          <div
+            style={styles.statCard}
+          >
 
-            <div style={styles.statIcon}>
+            <div
+              style={styles.statIcon}
+            >
               ⏱️
             </div>
 
 
             <div>
 
-              <p style={styles.statLabel}>
+              <p
+                style={styles.statLabel}
+              >
                 ETA
               </p>
 
 
-              <h3 style={styles.statValue}>
-                18 min
+              <h3
+                style={styles.statValue}
+              >
+                {formatETA(
+                  routeTime
+                )}
               </h3>
 
             </div>
@@ -540,24 +848,31 @@ function AmbulanceDashboard() {
           </div>
 
 
-
           {/* HOSPITAL */}
 
-          <div style={styles.statCard}>
+          <div
+            style={styles.statCard}
+          >
 
-            <div style={styles.statIcon}>
+            <div
+              style={styles.statIcon}
+            >
               🏥
             </div>
 
 
             <div>
 
-              <p style={styles.statLabel}>
+              <p
+                style={styles.statLabel}
+              >
                 Hospital
               </p>
 
 
-              <h3 style={styles.statValue}>
+              <h3
+                style={styles.statValue}
+              >
                 {hospital}
               </h3>
 
@@ -565,32 +880,155 @@ function AmbulanceDashboard() {
 
           </div>
 
-
         </section>
 
+
+        {/* =====================================
+            ROUTE MAP
+        ====================================== */}
+
+        <section
+          style={styles.routeCard}
+        >
+
+          <div
+            style={styles.cardHeader}
+          >
+
+            <h2>
+              🗺️ Smart Route & Live Navigation
+            </h2>
+
+
+            <span
+              style={styles.liveBadge}
+            >
+              LIVE ROUTE
+            </span>
+
+          </div>
+
+
+          <RouteMap
+
+            latitude={
+              location.latitude
+            }
+
+            longitude={
+              location.longitude
+            }
+
+            hospitalLatitude={
+              selectedHospital
+                ? selectedHospital.latitude
+                : null
+            }
+
+            hospitalLongitude={
+              selectedHospital
+                ? selectedHospital.longitude
+                : null
+            }
+
+            onRouteFound={
+              handleRouteFound
+            }
+
+          />
+
+
+          {/* ROUTE INFORMATION */}
+
+          <div
+            style={styles.routeInfoGrid}
+          >
+
+            <div
+              style={styles.routeInfoBox}
+            >
+
+              <span>
+                📏 Route Distance
+              </span>
+
+
+              <strong>
+                {formatDistance(
+                  routeDistance
+                )}
+              </strong>
+
+            </div>
+
+
+            <div
+              style={styles.routeInfoBox}
+            >
+
+              <span>
+                ⏱️ Estimated Arrival
+              </span>
+
+
+              <strong>
+                {formatETA(
+                  routeTime
+                )}
+              </strong>
+
+            </div>
+
+
+            <div
+              style={styles.routeInfoBox}
+            >
+
+              <span>
+                🏥 Destination
+              </span>
+
+
+              <strong>
+                {hospital}
+              </strong>
+
+            </div>
+
+          </div>
+
+        </section>
 
 
         {/* =====================================
             DASHBOARD GRID
         ====================================== */}
 
-        <section style={styles.dashboardGrid}>
+        <section
+          style={styles.dashboardGrid}
+        >
 
 
           {/* =====================================
               LIVE MAP
           ====================================== */}
 
-          <div style={styles.mapCard}>
+          <div
+            style={styles.mapCard}
+          >
 
-            <div style={styles.cardHeader}>
+            <div
+              style={styles.cardHeader}
+            >
 
               <h2>
                 📍 Live Ambulance Location
               </h2>
 
 
-              <span style={styles.liveBadge}>
+              <span
+                style={styles.liveBadge}
+              >
                 LIVE
               </span>
 
@@ -598,6 +1036,7 @@ function AmbulanceDashboard() {
 
 
             <AmbulanceMap
+
               latitude={
                 location.latitude
               }
@@ -605,15 +1044,19 @@ function AmbulanceDashboard() {
               longitude={
                 location.longitude
               }
+
             />
 
 
             {/* COORDINATES */}
 
-            <div style={styles.coordinates}>
+            <div
+              style={styles.coordinates}
+            >
 
-
-              <div style={styles.coordinateBox}>
+              <div
+                style={styles.coordinateBox}
+              >
 
                 <span>
                   Latitude
@@ -633,8 +1076,9 @@ function AmbulanceDashboard() {
               </div>
 
 
-
-              <div style={styles.coordinateBox}>
+              <div
+                style={styles.coordinateBox}
+              >
 
                 <span>
                   Longitude
@@ -653,20 +1097,22 @@ function AmbulanceDashboard() {
 
               </div>
 
-
             </div>
 
           </div>
-
 
 
           {/* =====================================
               EMERGENCY CONTROL
           ====================================== */}
 
-          <div style={styles.controlCard}>
+          <div
+            style={styles.controlCard}
+          >
 
-            <div style={styles.cardHeader}>
+            <div
+              style={styles.cardHeader}
+            >
 
               <h2>
                 🚨 Emergency Control
@@ -677,7 +1123,9 @@ function AmbulanceDashboard() {
 
             {/* PRIORITY */}
 
-            <label style={styles.label}>
+            <label
+              style={styles.label}
+            >
               Emergency Priority
             </label>
 
@@ -694,7 +1142,9 @@ function AmbulanceDashboard() {
 
               style={styles.select}
 
-              disabled={tripStarted}
+              disabled={
+                tripStarted
+              }
 
             >
 
@@ -715,10 +1165,11 @@ function AmbulanceDashboard() {
             </select>
 
 
-
             {/* HOSPITAL */}
 
-            <label style={styles.label}>
+            <label
+              style={styles.label}
+            >
               Destination Hospital
             </label>
 
@@ -727,15 +1178,27 @@ function AmbulanceDashboard() {
 
               value={hospital}
 
-              onChange={(e) =>
+              onChange={(e) => {
+
                 setHospital(
                   e.target.value
-                )
-              }
+                );
+
+                setRouteDistance(
+                  null
+                );
+
+                setRouteTime(
+                  null
+                );
+
+              }}
 
               style={styles.select}
 
-              disabled={tripStarted}
+              disabled={
+                tripStarted
+              }
 
             >
 
@@ -756,16 +1219,19 @@ function AmbulanceDashboard() {
             </select>
 
 
-
             {/* START / END */}
 
             {!tripStarted ? (
 
               <button
 
-                style={styles.startButton}
+                style={
+                  styles.startButton
+                }
 
-                onClick={startTrip}
+                onClick={
+                  startTrip
+                }
 
               >
 
@@ -777,9 +1243,13 @@ function AmbulanceDashboard() {
 
               <button
 
-                style={styles.stopButton}
+                style={
+                  styles.stopButton
+                }
 
-                onClick={stopTrip}
+                onClick={
+                  stopTrip
+                }
 
               >
 
@@ -790,27 +1260,33 @@ function AmbulanceDashboard() {
             )}
 
 
-
             {/* ACTIVE TRIP */}
 
             {tripStarted && (
 
-              <div style={styles.tripStatus}>
+              <div
+                style={
+                  styles.tripStatus
+                }
+              >
 
                 <span
-                  style={styles.activeDot}
-                >
-                </span>
+                  style={
+                    styles.activeDot
+                  }
+                />
 
                 Emergency trip is active
 
 
                 {tripId && (
 
-                  <div style={styles.tripId}>
-
+                  <div
+                    style={
+                      styles.tripId
+                    }
+                  >
                     Trip ID: {tripId}
-
                   </div>
 
                 )}
@@ -820,26 +1296,23 @@ function AmbulanceDashboard() {
             )}
 
 
-
             {/* MESSAGE */}
 
             {tripMessage && (
 
               <div
-
                 style={{
-
                   ...styles.message,
 
                   color:
-                    tripMessage.startsWith("✅")
+                    tripMessage.startsWith(
+                      "✅"
+                    )
 
                       ? "#15803d"
 
                       : "#dc2626"
-
                 }}
-
               >
 
                 {tripMessage}
@@ -850,18 +1323,20 @@ function AmbulanceDashboard() {
 
           </div>
 
-
         </section>
-
 
 
         {/* =====================================
             JOURNEY INFORMATION
         ====================================== */}
 
-        <section style={styles.journeyCard}>
+        <section
+          style={styles.journeyCard}
+        >
 
-          <div style={styles.cardHeader}>
+          <div
+            style={styles.cardHeader}
+          >
 
             <h2>
               🛣️ Journey Information
@@ -870,10 +1345,13 @@ function AmbulanceDashboard() {
           </div>
 
 
-          <div style={styles.journeyGrid}>
+          <div
+            style={styles.journeyGrid}
+          >
 
-
-            <div style={styles.journeyItem}>
+            <div
+              style={styles.journeyItem}
+            >
 
               <span>
                 Starting Point
@@ -881,14 +1359,22 @@ function AmbulanceDashboard() {
 
 
               <strong>
-                Current Location
+
+                {location.latitude !== null &&
+                location.longitude !== null
+
+                  ? `${location.latitude.toFixed(4)}, ${location.longitude.toFixed(4)}`
+
+                  : "Current Location"}
+
               </strong>
 
             </div>
 
 
-
-            <div style={styles.journeyItem}>
+            <div
+              style={styles.journeyItem}
+            >
 
               <span>
                 Destination
@@ -902,8 +1388,9 @@ function AmbulanceDashboard() {
             </div>
 
 
-
-            <div style={styles.journeyItem}>
+            <div
+              style={styles.journeyItem}
+            >
 
               <span>
                 Distance
@@ -911,14 +1398,17 @@ function AmbulanceDashboard() {
 
 
               <strong>
-                7.8 km
+                {formatDistance(
+                  routeDistance
+                )}
               </strong>
 
             </div>
 
 
-
-            <div style={styles.journeyItem}>
+            <div
+              style={styles.journeyItem}
+            >
 
               <span>
                 Estimated Time
@@ -926,41 +1416,49 @@ function AmbulanceDashboard() {
 
 
               <strong>
-                18 minutes
+                {formatETA(
+                  routeTime
+                )}
               </strong>
 
             </div>
-
 
           </div>
 
         </section>
 
 
-
         {/* =====================================
             TRAFFIC ALERT
         ====================================== */}
 
-        <section style={styles.alertCard}>
+        <section
+          style={styles.alertCard}
+        >
 
-          <div style={styles.alertIcon}>
+          <div
+            style={styles.alertIcon}
+          >
             🚦
           </div>
 
 
           <div>
 
-            <h3 style={styles.alertTitle}>
+            <h3
+              style={styles.alertTitle}
+            >
               Traffic Coordination
             </h3>
 
 
-            <p style={styles.alertText}>
+            <p
+              style={styles.alertText}
+            >
 
-              Traffic police will receive alerts
-              for upcoming junctions when an
-              emergency trip is active.
+              Traffic police will receive
+              alerts for upcoming junctions
+              when an emergency trip is active.
 
             </p>
 
@@ -972,20 +1470,23 @@ function AmbulanceDashboard() {
       </main>
 
 
-
       {/* =====================================
           FOOTER
       ====================================== */}
 
-      <footer style={styles.footer}>
+      <footer
+        style={styles.footer}
+      >
 
         <p>
+
           Smart Ambulance © 2026 |
+
           Emergency Traffic Coordination Platform
+
         </p>
 
       </footer>
-
 
     </div>
 
@@ -994,12 +1495,12 @@ function AmbulanceDashboard() {
 }
 
 
-
-{/* =================================
-    STYLES
-================================= */}
+// ==========================================
+// STYLES
+// ==========================================
 
 const styles = {
+
 
   page: {
 
@@ -1231,6 +1732,53 @@ const styles = {
     fontSize: "18px",
 
     color: "#0f6fae"
+
+  },
+
+
+  routeCard: {
+
+    background: "white",
+
+    borderRadius: "15px",
+
+    padding: "22px",
+
+    boxShadow:
+      "0 4px 15px rgba(0,0,0,0.07)",
+
+    marginBottom: "25px"
+
+  },
+
+
+  routeInfoGrid: {
+
+    display: "grid",
+
+    gridTemplateColumns:
+      "repeat(3, 1fr)",
+
+    gap: "15px",
+
+    marginTop: "15px"
+
+  },
+
+
+  routeInfoBox: {
+
+    background: "#f8fafc",
+
+    padding: "15px",
+
+    borderRadius: "8px",
+
+    display: "flex",
+
+    flexDirection: "column",
+
+    gap: "7px"
 
   },
 

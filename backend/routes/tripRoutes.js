@@ -1,5 +1,7 @@
 const express = require("express");
+
 const Trip = require("../models/Trip");
+const JunctionAlert = require("../models/JunctionAlert");
 
 const router = express.Router();
 
@@ -100,7 +102,6 @@ router.post("/start", async (req, res) => {
 });
 
 
-
 // ==========================================
 // UPDATE AMBULANCE LOCATION
 // ==========================================
@@ -111,7 +112,8 @@ router.put(
 
     try {
 
-      const { tripId } = req.params;
+      const { tripId } =
+        req.params;
 
       const {
         latitude,
@@ -148,9 +150,11 @@ router.put(
 
             currentLocation: {
 
-              latitude: Number(latitude),
+              latitude:
+                Number(latitude),
 
-              longitude: Number(longitude)
+              longitude:
+                Number(longitude)
 
             }
 
@@ -215,60 +219,63 @@ router.put(
 );
 
 
-
 // ==========================================
 // GET ACTIVE TRIPS
 // ==========================================
 
-router.get("/active", async (req, res) => {
+router.get(
+  "/active",
+  async (req, res) => {
 
-  try {
+    try {
 
-    const activeTrips =
-      await Trip.find({
+      const activeTrips =
+        await Trip.find({
 
-        status: "ACTIVE"
+          status: "ACTIVE"
 
-      }).sort({
+        }).sort({
 
-        startedAt: -1
+          startedAt: -1
+
+        });
+
+
+      res.status(200).json({
+
+        message:
+          "Active trips retrieved successfully",
+
+        count:
+          activeTrips.length,
+
+        trips:
+          activeTrips
 
       });
 
 
-    res.status(200).json({
+    } catch (error) {
 
-      message:
-        "Active trips retrieved successfully",
-
-      count: activeTrips.length,
-
-      trips: activeTrips
-
-    });
+      console.error(
+        "GET ACTIVE TRIPS ERROR:",
+        error
+      );
 
 
-  } catch (error) {
+      res.status(500).json({
 
-    console.error(
-      "GET ACTIVE TRIPS ERROR:",
-      error
-    );
+        message:
+          "Failed to retrieve active trips",
 
+        error: error.message
 
-    res.status(500).json({
+      });
 
-      message:
-        "Failed to retrieve active trips",
-
-      error: error.message
-
-    });
+    }
 
   }
-
-});
-
+);
 
 
 // ==========================================
@@ -281,19 +288,29 @@ router.put(
 
     try {
 
-      const { tripId } = req.params;
+      const { tripId } =
+        req.params;
 
-      const { clearance } = req.body;
+      const { clearance } =
+        req.body;
 
 
       const validStatuses = [
+
         "PENDING",
+
         "PREPARING",
+
         "CLEARED"
+
       ];
 
 
-      if (!validStatuses.includes(clearance)) {
+      if (
+        !validStatuses.includes(
+          clearance
+        )
+      ) {
 
         return res.status(400).json({
 
@@ -311,7 +328,8 @@ router.put(
           tripId,
 
           {
-            trafficClearance: clearance
+            trafficClearance:
+              clearance
           },
 
           {
@@ -371,7 +389,6 @@ router.put(
 );
 
 
-
 // ==========================================
 // END EMERGENCY TRIP
 // ==========================================
@@ -382,7 +399,8 @@ router.put(
 
     try {
 
-      const { tripId } = req.params;
+      const { tripId } =
+        req.params;
 
 
       const trip =
@@ -392,9 +410,11 @@ router.put(
 
           {
 
-            status: "COMPLETED",
+            status:
+              "COMPLETED",
 
-            completedAt: new Date()
+            completedAt:
+              new Date()
 
           },
 
@@ -417,6 +437,32 @@ router.put(
         });
 
       }
+
+
+      // ======================================
+      // MARK JUNCTION ALERTS AS PASSED
+      // ======================================
+
+      await JunctionAlert.updateMany(
+
+        {
+          tripId: tripId,
+
+          status: {
+            $in: [
+              "UPCOMING",
+              "PREPARING",
+              "CLEARED"
+            ]
+          }
+
+        },
+
+        {
+          status: "PASSED"
+        }
+
+      );
 
 
       console.log(
@@ -449,6 +495,338 @@ router.put(
           "Failed to end emergency trip",
 
         error: error.message
+
+      });
+
+    }
+
+  }
+);
+
+
+// ==========================================
+// CREATE JUNCTION ALERT
+// ==========================================
+
+router.post(
+  "/junction-alerts",
+  async (req, res) => {
+
+    try {
+
+      const {
+        tripId,
+        junctionName,
+        latitude,
+        longitude,
+        distanceFromAmbulance,
+        priority
+      } = req.body;
+
+
+      // ======================================
+      // VALIDATION
+      // ======================================
+
+      if (
+        !tripId ||
+        !junctionName ||
+        latitude === undefined ||
+        longitude === undefined ||
+        distanceFromAmbulance === undefined ||
+        !priority
+      ) {
+
+        return res.status(400).json({
+
+          message:
+            "Missing junction alert information"
+
+        });
+
+      }
+
+
+      // ======================================
+      // CHECK TRIP
+      // ======================================
+
+      const trip =
+        await Trip.findOne({
+
+          _id: tripId,
+
+          status: "ACTIVE"
+
+        });
+
+
+      if (!trip) {
+
+        return res.status(404).json({
+
+          message:
+            "Active trip not found"
+
+        });
+
+      }
+
+
+      // ======================================
+      // CREATE ALERT
+      // ======================================
+
+      const alert =
+        await JunctionAlert.create({
+
+          tripId:
+            trip._id,
+
+          ambulanceId:
+            trip.ambulanceId,
+
+          junctionName:
+
+            junctionName,
+
+          latitude:
+            Number(latitude),
+
+          longitude:
+            Number(longitude),
+
+          distanceFromAmbulance:
+            Number(
+              distanceFromAmbulance
+            ),
+
+          priority:
+            priority,
+
+          status:
+            "UPCOMING"
+
+        });
+
+
+      console.log(
+        "Junction alert created:",
+        alert.junctionName
+      );
+
+
+      res.status(201).json({
+
+        message:
+          "Junction alert created successfully",
+
+        alert
+
+      });
+
+
+    } catch (error) {
+
+      console.error(
+        "CREATE JUNCTION ALERT ERROR:",
+        error
+      );
+
+
+      res.status(500).json({
+
+        message:
+          "Failed to create junction alert",
+
+        error:
+          error.message
+
+      });
+
+    }
+
+  }
+);
+
+
+// ==========================================
+// GET JUNCTION ALERTS FOR A TRIP
+// ==========================================
+
+router.get(
+  "/junction-alerts/:tripId",
+  async (req, res) => {
+
+    try {
+
+      const { tripId } =
+        req.params;
+
+
+      const alerts =
+        await JunctionAlert.find({
+
+          tripId:
+            tripId
+
+        }).sort({
+
+          distanceFromAmbulance:
+            1
+
+        });
+
+
+      res.status(200).json({
+
+        message:
+          "Junction alerts retrieved successfully",
+
+        count:
+          alerts.length,
+
+        alerts:
+          alerts
+
+      });
+
+
+    } catch (error) {
+
+      console.error(
+        "GET JUNCTION ALERTS ERROR:",
+        error
+      );
+
+
+      res.status(500).json({
+
+        message:
+          "Failed to retrieve junction alerts",
+
+        error:
+          error.message
+
+      });
+
+    }
+
+  }
+);
+
+
+// ==========================================
+// UPDATE JUNCTION ALERT STATUS
+// ==========================================
+
+router.put(
+  "/junction-alerts/status/:alertId",
+  async (req, res) => {
+
+    try {
+
+      const { alertId } =
+        req.params;
+
+      const { status } =
+        req.body;
+
+
+      const validStatuses = [
+
+        "UPCOMING",
+
+        "PREPARING",
+
+        "CLEARED",
+
+        "PASSED"
+
+      ];
+
+
+      if (
+        !validStatuses.includes(
+          status
+        )
+      ) {
+
+        return res.status(400).json({
+
+          message:
+            "Invalid junction alert status"
+
+        });
+
+      }
+
+
+      const alert =
+        await JunctionAlert.findByIdAndUpdate(
+
+          alertId,
+
+          {
+
+            status:
+              status
+
+          },
+
+          {
+
+            new: true
+
+          }
+
+        );
+
+
+      if (!alert) {
+
+        return res.status(404).json({
+
+          message:
+            "Junction alert not found"
+
+        });
+
+      }
+
+
+      console.log(
+
+        `Junction alert updated: ${alert.junctionName} → ${status}`
+
+      );
+
+
+      res.status(200).json({
+
+        message:
+          "Junction alert status updated successfully",
+
+        alert
+
+      });
+
+
+    } catch (error) {
+
+      console.error(
+        "UPDATE JUNCTION ALERT ERROR:",
+        error
+      );
+
+
+      res.status(500).json({
+
+        message:
+          "Failed to update junction alert status",
+
+        error:
+          error.message
 
       });
 

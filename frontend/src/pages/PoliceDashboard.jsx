@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import axios from "axios";
 
 import PoliceMap from "../components/PoliceMap";
-import JunctionAlerts from "../components/JunctionAlerts";
+import JunctionAlertList from "../components/JunctionAlertList";
 import TrafficSignal from "../components/TrafficSignal";
 
 
@@ -13,16 +13,17 @@ function PoliceDashboard() {
 
 
   // ==========================================
-  // FETCH ACTIVE AMBULANCES
+  // FETCH ACTIVE AMBULANCE TRIPS
   // ==========================================
 
   const fetchActiveTrips = async () => {
 
     try {
 
-      const response = await axios.get(
-        "http://localhost:5000/api/trips/active"
-      );
+      const response =
+        await axios.get(
+          "http://localhost:5000/api/trips/active"
+        );
 
       setTrips(
         response.data.trips || []
@@ -45,12 +46,13 @@ function PoliceDashboard() {
 
 
   // ==========================================
-  // LOAD DATA + REFRESH EVERY 5 SECONDS
+  // LOAD ACTIVE TRIPS
   // ==========================================
 
   useEffect(() => {
 
     fetchActiveTrips();
+
 
     const interval =
       setInterval(() => {
@@ -62,7 +64,9 @@ function PoliceDashboard() {
 
     return () => {
 
-      clearInterval(interval);
+      clearInterval(
+        interval
+      );
 
     };
 
@@ -70,7 +74,7 @@ function PoliceDashboard() {
 
 
   // ==========================================
-  // CHECK EMERGENCY PRIORITY
+  // CHECK EMERGENCY STATUS
   // ==========================================
 
   const emergencyActive =
@@ -95,9 +99,9 @@ function PoliceDashboard() {
       }}
     >
 
-      {/* ===================================== */}
-      {/* HEADER */}
-      {/* ===================================== */}
+      {/* ======================================
+          HEADER
+      ====================================== */}
 
       <header
         style={{
@@ -147,6 +151,10 @@ function PoliceDashboard() {
       </header>
 
 
+      {/* ======================================
+          MAIN CONTENT
+      ====================================== */}
+
       <main
         style={{
           maxWidth: "1500px",
@@ -155,10 +163,9 @@ function PoliceDashboard() {
         }}
       >
 
-
-        {/* ===================================== */}
-        {/* SUMMARY CARDS */}
-        {/* ===================================== */}
+        {/* ====================================
+            STATISTICS
+        ==================================== */}
 
         <div
           style={{
@@ -169,6 +176,8 @@ function PoliceDashboard() {
             marginBottom: "30px"
           }}
         >
+
+          {/* ACTIVE AMBULANCES */}
 
           <div style={cardStyle}>
 
@@ -191,6 +200,8 @@ function PoliceDashboard() {
           </div>
 
 
+          {/* EMERGENCY TRIPS */}
+
           <div style={cardStyle}>
 
             <div style={cardIconStyle}>
@@ -212,6 +223,8 @@ function PoliceDashboard() {
           </div>
 
 
+          {/* JUNCTION ALERTS */}
+
           <div style={cardStyle}>
 
             <div style={cardIconStyle}>
@@ -232,6 +245,8 @@ function PoliceDashboard() {
 
           </div>
 
+
+          {/* SYSTEM STATUS */}
 
           <div style={cardStyle}>
 
@@ -262,9 +277,9 @@ function PoliceDashboard() {
         </div>
 
 
-        {/* ===================================== */}
-        {/* ACTIVE AMBULANCES */}
-        {/* ===================================== */}
+        {/* ====================================
+            ACTIVE AMBULANCES
+        ==================================== */}
 
         <section
           style={{
@@ -347,6 +362,7 @@ function PoliceDashboard() {
                       🚑{" "}
                       {trip.ambulanceId}
                     </h2>
+
 
                     <p
                       style={{
@@ -444,6 +460,7 @@ function PoliceDashboard() {
                               "PREPARING"
                             ? "#ca8a04"
                             : "#64748b",
+
                         fontWeight:
                           "bold"
                       }}
@@ -469,11 +486,9 @@ function PoliceDashboard() {
                       "bold"
                   }}
                 >
-
                   🚨 Ambulance is
                   currently on an
                   emergency trip.
-
                 </div>
 
               </div>
@@ -485,9 +500,9 @@ function PoliceDashboard() {
         </section>
 
 
-        {/* ===================================== */}
-        {/* LIVE MAP */}
-        {/* ===================================== */}
+        {/* ====================================
+            LIVE AMBULANCE MAP
+        ==================================== */}
 
         <section
           style={{
@@ -532,10 +547,8 @@ function PoliceDashboard() {
                 color: "#64748b"
               }}
             >
-
               No active ambulance
               to display.
-
             </div>
 
           )}
@@ -543,25 +556,29 @@ function PoliceDashboard() {
         </section>
 
 
-        {/* ===================================== */}
-        {/* JUNCTION ALERTS */}
-        {/* ===================================== */}
+        {/* ====================================
+            REAL JUNCTION ALERTS
+        ==================================== */}
 
-        <JunctionAlerts
-          trips={trips}
-        />
+        {trips.map((trip) => (
+
+          <JunctionAlertList
+            key={trip._id}
+            tripId={trip._id}
+          />
+
+        ))}
 
 
-        {/* ===================================== */}
-        {/* TRAFFIC SIGNAL */}
-        {/* ===================================== */}
+        {/* ====================================
+            TRAFFIC SIGNAL
+        ==================================== */}
 
         <TrafficSignal
           emergencyActive={
             emergencyActive
           }
         />
-
 
       </main>
 
@@ -573,7 +590,7 @@ function PoliceDashboard() {
 
 
 // ==========================================
-// STYLES
+// CARD STYLES
 // ==========================================
 
 const cardStyle = {
