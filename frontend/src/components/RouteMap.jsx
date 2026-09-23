@@ -12,7 +12,6 @@ import "leaflet/dist/leaflet.css";
 
 import {
   useEffect,
-  useRef,
   useState
 } from "react";
 
@@ -47,25 +46,15 @@ function RouteCalculator({
 
   const map = useMap();
 
+  const [routeCoordinates, setRouteCoordinates] =
+    useState([]);
 
-  const [
-    routeCoordinates,
-    setRouteCoordinates
-  ] = useState([]);
-
-
-  const [
-    routeStatus,
-    setRouteStatus
-  ] = useState("Calculating route...");
-
-
-  const lastRouteLocation =
-    useRef(null);
+  const [routeStatus, setRouteStatus] =
+    useState("🔄 Calculating road route...");
 
 
   // ==========================================
-  // CALCULATE ROUTE
+  // CALCULATE ROAD ROUTE USING OSRM
   // ==========================================
 
   const calculateRoute = async () => {
@@ -74,31 +63,46 @@ function RouteCalculator({
       !start ||
       !destination
     ) {
-
       return;
-
     }
 
 
     try {
 
       setRouteStatus(
-        "🔄 Updating route..."
+        "🔄 Calculating road route..."
       );
 
 
-      const startLongitude =
-        start[1];
-
       const startLatitude =
-        start[0];
+        Number(start[0]);
 
-      const destinationLongitude =
-        destination[1];
+      const startLongitude =
+        Number(start[1]);
 
       const destinationLatitude =
-        destination[0];
+        Number(destination[0]);
 
+      const destinationLongitude =
+        Number(destination[1]);
+
+
+      console.log(
+        "🚑 Route start:",
+        startLatitude,
+        startLongitude
+      );
+
+      console.log(
+        "🏥 Route destination:",
+        destinationLatitude,
+        destinationLongitude
+      );
+
+
+      // ==========================================
+      // OSRM ROUTING URL
+      // ==========================================
 
       const url =
         `https://router.project-osrm.org/route/v1/driving/` +
@@ -107,14 +111,25 @@ function RouteCalculator({
         `?overview=full&geometries=geojson`;
 
 
+      console.log(
+        "🗺️ OSRM URL:",
+        url
+      );
+
+
       const response =
-        await fetch(url);
+        await fetch(url, {
+          method: "GET",
+          headers: {
+            Accept: "application/json"
+          }
+        });
 
 
       if (!response.ok) {
 
         throw new Error(
-          "Routing service unavailable"
+          `OSRM HTTP error: ${response.status}`
         );
 
       }
@@ -124,6 +139,12 @@ function RouteCalculator({
         await response.json();
 
 
+      console.log(
+        "🗺️ OSRM response:",
+        data
+      );
+
+
       if (
         data.code !== "Ok" ||
         !data.routes ||
@@ -131,7 +152,7 @@ function RouteCalculator({
       ) {
 
         throw new Error(
-          "No route found"
+          "OSRM could not find a road route"
         );
 
       }
@@ -145,29 +166,57 @@ function RouteCalculator({
       // DISTANCE + ETA
       // ==========================================
 
-      onRouteFound({
+      if (onRouteFound) {
 
-        distance:
-          route.distance,
+        onRouteFound({
+          distance:
+            route.distance,
 
-        time:
-          route.duration
+          time:
+            route.duration
+        });
 
-      });
+      }
 
 
       // ==========================================
-      // ROAD COORDINATES
+      // CONVERT OSRM COORDINATES
+      // OSRM:
+      // [longitude, latitude]
+      //
+      // LEAFLET:
+      // [latitude, longitude]
       // ==========================================
 
       const coordinates =
         route.geometry.coordinates.map(
           (point) => [
-            point[1],
-            point[0]
+            Number(point[1]),
+            Number(point[0])
           ]
         );
 
+
+      console.log(
+        "📍 Route points:",
+        coordinates.length
+      );
+
+
+      if (
+        coordinates.length === 0
+      ) {
+
+        throw new Error(
+          "Route returned no coordinates"
+        );
+
+      }
+
+
+      // ==========================================
+      // DRAW ROUTE
+      // ==========================================
 
       setRouteCoordinates(
         coordinates
@@ -175,46 +224,41 @@ function RouteCalculator({
 
 
       setRouteStatus(
-        "🟢 Route updated"
+        "🟢 Road route found"
       );
 
 
       // ==========================================
-      // FIT MAP TO ROUTE
+      // FIT MAP TO COMPLETE ROUTE
       // ==========================================
 
-      if (
-        coordinates.length > 0
-      ) {
-
-        const bounds =
-          L.latLngBounds(
-            coordinates
-          );
-
-
-        map.fitBounds(
-          bounds,
-          {
-            padding: [
-              40,
-              40
-            ]
-          }
+      const bounds =
+        L.latLngBounds(
+          coordinates
         );
 
-      }
+
+      map.fitBounds(
+        bounds,
+        {
+          padding: [
+            60,
+            60
+          ]
+        }
+      );
+
 
     } catch (error) {
 
       console.error(
-        "Route calculation error:",
+        "❌ Route calculation error:",
         error
       );
 
 
       setRouteStatus(
-        "⚠️ Route update failed"
+        "⚠️ Road route could not be loaded"
       );
 
     }
@@ -223,79 +267,12 @@ function RouteCalculator({
 
 
   // ==========================================
-  // INITIAL ROUTE + GPS CHANGE
+  // CALCULATE WHEN START / DESTINATION CHANGES
   // ==========================================
 
   useEffect(() => {
 
-    if (
-      !start ||
-      !destination
-    ) {
-
-      return;
-
-    }
-
-
-    // ------------------------------------------
-    // CHECK GPS MOVEMENT
-    // ------------------------------------------
-
-    let shouldRecalculate = true;
-
-
-    if (
-      lastRouteLocation.current
-    ) {
-
-      const previous =
-        lastRouteLocation.current;
-
-
-      const latitudeDifference =
-        Math.abs(
-          start[0] -
-          previous[0]
-        );
-
-
-      const longitudeDifference =
-        Math.abs(
-          start[1] -
-          previous[1]
-        );
-
-
-      // Recalculate when GPS moves
-      // approximately more than 20 metres.
-
-      if (
-        latitudeDifference <
-          0.0002 &&
-        longitudeDifference <
-          0.0002
-      ) {
-
-        shouldRecalculate = false;
-
-      }
-
-    }
-
-
-    if (
-      shouldRecalculate
-    ) {
-
-      lastRouteLocation.current =
-        start;
-
-
-      calculateRoute();
-
-    }
-
+    calculateRoute();
 
   }, [
     start,
@@ -304,7 +281,7 @@ function RouteCalculator({
 
 
   // ==========================================
-  // AUTOMATIC ROUTE REFRESH
+  // REFRESH ROUTE EVERY 10 SECONDS
   // ==========================================
 
   useEffect(() => {
@@ -313,18 +290,12 @@ function RouteCalculator({
       !start ||
       !destination
     ) {
-
       return;
-
     }
 
 
     const interval =
       setInterval(() => {
-
-        lastRouteLocation.current =
-          start;
-
 
         calculateRoute();
 
@@ -346,27 +317,25 @@ function RouteCalculator({
 
 
   return (
-
     <>
-
       {/* =====================================
-          ROUTE LINE
+          ACTUAL ROAD ROUTE
       ====================================== */}
 
-      {routeCoordinates.length > 0 && (
+      {routeCoordinates.length > 1 && (
 
         <Polyline
-
           positions={
             routeCoordinates
           }
 
           pathOptions={{
             color: "#2563eb",
-            weight: 6,
-            opacity: 0.85
+            weight: 7,
+            opacity: 0.9,
+            lineCap: "round",
+            lineJoin: "round"
           }}
-
         />
 
       )}
@@ -382,24 +351,37 @@ function RouteCalculator({
           bottom: "15px",
           left: "15px",
           zIndex: 1000,
+
           background: "white",
-          padding: "8px 12px",
-          borderRadius: "8px",
+
+          padding:
+            "10px 15px",
+
+          borderRadius:
+            "8px",
+
           boxShadow:
-            "0 2px 8px rgba(0,0,0,0.2)",
-          fontSize: "13px",
-          fontWeight: "bold"
+            "0 3px 10px rgba(0,0,0,0.2)",
+
+          fontSize:
+            "13px",
+
+          fontWeight:
+            "bold",
+
+          color:
+            routeStatus.includes("🟢")
+              ? "#15803d"
+              : routeStatus.includes("⚠️")
+              ? "#dc2626"
+              : "#1e3a5f"
         }}
       >
-
         {routeStatus}
-
       </div>
 
     </>
-
   );
-
 }
 
 
@@ -415,29 +397,36 @@ function RouteMap({
   onRouteFound
 }) {
 
+  // ==========================================
+  // AMBULANCE LOCATION
+  // ==========================================
 
   const ambulanceLocation =
     latitude !== null &&
     longitude !== null
 
       ? [
-          latitude,
-          longitude
+          Number(latitude),
+          Number(longitude)
         ]
 
       : [
-          16.5062,
-          80.6480
+          17.3934,
+          78.4706
         ];
 
+
+  // ==========================================
+  // HOSPITAL LOCATION
+  // ==========================================
 
   const hospitalLocation =
     hospitalLatitude !== null &&
     hospitalLongitude !== null
 
       ? [
-          hospitalLatitude,
-          hospitalLongitude
+          Number(hospitalLatitude),
+          Number(hospitalLongitude)
         ]
 
       : null;
@@ -456,7 +445,6 @@ function RouteMap({
     >
 
       <MapContainer
-
         center={
           ambulanceLocation
         }
@@ -467,20 +455,20 @@ function RouteMap({
           width: "100%",
           height: "100%"
         }}
-
       >
 
+        {/* =====================================
+            OPENSTREETMAP
+        ====================================== */}
+
         <TileLayer
-
           attribution="&copy; OpenStreetMap contributors"
-
           url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-
         />
 
 
         {/* =====================================
-            AMBULANCE
+            AMBULANCE MARKER
         ====================================== */}
 
         <Marker
@@ -501,20 +489,18 @@ function RouteMap({
 
             <br />
 
-            Latitude:
-            {" "}
+            Latitude:{" "}
 
             {latitude !== null
-              ? latitude.toFixed(6)
+              ? Number(latitude).toFixed(6)
               : "Waiting..."}
 
             <br />
 
-            Longitude:
-            {" "}
+            Longitude:{" "}
 
             {longitude !== null
-              ? longitude.toFixed(6)
+              ? Number(longitude).toFixed(6)
               : "Waiting..."}
 
           </Popup>
@@ -523,7 +509,7 @@ function RouteMap({
 
 
         {/* =====================================
-            HOSPITAL
+            HOSPITAL MARKER
         ====================================== */}
 
         {hospitalLocation && (
@@ -544,6 +530,18 @@ function RouteMap({
 
               Emergency Destination
 
+              <br />
+
+              Latitude:{" "}
+
+              {hospitalLocation[0].toFixed(6)}
+
+              <br />
+
+              Longitude:{" "}
+
+              {hospitalLocation[1].toFixed(6)}
+
             </Popup>
 
           </Marker>
@@ -552,7 +550,7 @@ function RouteMap({
 
 
         {/* =====================================
-            DYNAMIC ROUTE
+            ACTUAL ROAD ROUTE
         ====================================== */}
 
         {hospitalLocation && (
@@ -580,7 +578,6 @@ function RouteMap({
     </div>
 
   );
-
 }
 
 
