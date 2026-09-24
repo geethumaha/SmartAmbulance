@@ -1,6 +1,8 @@
 import { useEffect, useState } from "react";
 import axios from "axios";
 
+import HospitalMap from "../components/HospitalMap";
+
 
 function HospitalDashboard() {
 
@@ -20,11 +22,9 @@ function HospitalDashboard() {
         "http://localhost:5000/api/trips/active"
       );
 
-
       setTrips(
         response.data.trips || []
       );
-
 
       setLoading(false);
 
@@ -34,7 +34,6 @@ function HospitalDashboard() {
         "Failed to fetch incoming ambulances:",
         error
       );
-
 
       setLoading(false);
 
@@ -51,14 +50,12 @@ function HospitalDashboard() {
 
     fetchIncomingAmbulances();
 
-
     const interval =
       setInterval(() => {
 
         fetchIncomingAmbulances();
 
       }, 5000);
-
 
     return () => {
 
@@ -67,6 +64,17 @@ function HospitalDashboard() {
     };
 
   }, []);
+
+
+  // ==========================================
+  // CRITICAL EMERGENCY COUNT
+  // ==========================================
+
+  const criticalTrips =
+    trips.filter(
+      (trip) =>
+        trip.priority === "Critical"
+    );
 
 
   return (
@@ -143,6 +151,205 @@ function HospitalDashboard() {
 
 
         {/* ===================================== */}
+        {/* CRITICAL EMERGENCY NOTIFICATION */}
+        {/* ===================================== */}
+
+        {criticalTrips.length > 0 && (
+
+          <div
+            style={{
+              background:
+                "linear-gradient(135deg, #fee2e2, #fff1f2)",
+              border:
+                "2px solid #ef4444",
+              borderRadius: "15px",
+              padding: "25px",
+              marginBottom: "30px",
+              boxShadow:
+                "0 5px 18px rgba(239,68,68,0.18)"
+            }}
+          >
+
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: "15px",
+                marginBottom: "15px"
+              }}
+            >
+
+              <div
+                style={{
+                  fontSize: "40px"
+                }}
+              >
+                🚨
+              </div>
+
+              <div>
+
+                <h2
+                  style={{
+                    margin: 0,
+                    color: "#b91c1c"
+                  }}
+                >
+                  CRITICAL EMERGENCY ALERT
+                </h2>
+
+                <p
+                  style={{
+                    margin:
+                      "5px 0 0",
+                    color: "#7f1d1d",
+                    fontWeight: "bold"
+                  }}
+                >
+                  Immediate medical preparation required
+                </p>
+
+              </div>
+
+            </div>
+
+
+            {criticalTrips.map((trip) => (
+
+              <div
+                key={trip._id}
+                style={{
+                  background: "white",
+                  borderRadius: "10px",
+                  padding: "18px",
+                  marginTop: "12px",
+                  border:
+                    "1px solid #fecaca"
+                }}
+              >
+
+                <div
+                  style={{
+                    display: "grid",
+                    gridTemplateColumns:
+                      "repeat(auto-fit, minmax(180px, 1fr))",
+                    gap: "15px"
+                  }}
+                >
+
+                  <div>
+
+                    <strong>
+                      🚑 Ambulance
+                    </strong>
+
+                    <p
+                      style={{
+                        margin:
+                          "6px 0 0",
+                        color: "#1e3a5f",
+                        fontWeight: "bold"
+                      }}
+                    >
+                      {trip.ambulanceId}
+                    </p>
+
+                  </div>
+
+
+                  <div>
+
+                    <strong>
+                      🏥 Destination
+                    </strong>
+
+                    <p
+                      style={{
+                        margin:
+                          "6px 0 0",
+                        color: "#1e3a5f"
+                      }}
+                    >
+                      {trip.hospital}
+                    </p>
+
+                  </div>
+
+
+                  <div>
+
+                    <strong>
+                      🚦 Traffic
+                    </strong>
+
+                    <p
+                      style={{
+                        margin:
+                          "6px 0 0",
+                        color:
+                          trip.trafficClearance ===
+                          "CLEARED"
+                            ? "#15803d"
+                            : "#ca8a04",
+                        fontWeight:
+                          "bold"
+                      }}
+                    >
+                      {trip.trafficClearance ||
+                        "PENDING"}
+                    </p>
+
+                  </div>
+
+
+                  <div>
+
+                    <strong>
+                      📍 Location
+                    </strong>
+
+                    <p
+                      style={{
+                        margin:
+                          "6px 0 0",
+                        color: "#1e3a5f"
+                      }}
+                    >
+                      {trip.currentLocation?.latitude?.toFixed(4)}
+                      {", "}
+                      {trip.currentLocation?.longitude?.toFixed(4)}
+                    </p>
+
+                  </div>
+
+                </div>
+
+
+                <div
+                  style={{
+                    marginTop: "15px",
+                    padding: "12px",
+                    background: "#fff7ed",
+                    borderRadius: "8px",
+                    color: "#9a3412",
+                    fontWeight: "bold"
+                  }}
+                >
+                  🏥 Medical team and emergency
+                  resources should be ready before
+                  ambulance arrival.
+                </div>
+
+              </div>
+
+            ))}
+
+          </div>
+
+        )}
+
+
+        {/* ===================================== */}
         {/* SUMMARY */}
         {/* ===================================== */}
 
@@ -191,11 +398,7 @@ function HospitalDashboard() {
               </p>
 
               <h2 style={valueStyle}>
-                {trips.filter(
-                  (trip) =>
-                    trip.priority ===
-                    "Critical"
-                ).length}
+                {criticalTrips.length}
               </h2>
 
             </div>
@@ -485,6 +688,23 @@ function HospitalDashboard() {
                   </div>
 
                 </div>
+
+
+                {/* ================================= */}
+                {/* HOSPITAL MAP */}
+                {/* ================================= */}
+
+                <HospitalMap
+                  latitude={
+                    trip.currentLocation?.latitude
+                  }
+                  longitude={
+                    trip.currentLocation?.longitude
+                  }
+                  ambulanceId={
+                    trip.ambulanceId
+                  }
+                />
 
 
                 {/* ================================= */}

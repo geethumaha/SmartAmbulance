@@ -1,41 +1,62 @@
 import { useEffect, useState } from "react";
 import axios from "axios";
 
-
 function AdminDashboard() {
 
+  const [analytics, setAnalytics] = useState({
+    totalTrips: 0,
+    activeTrips: 0,
+    completedTrips: 0,
+    criticalTrips: 0,
+    seriousTrips: 0,
+    moderateTrips: 0,
+    averageJourneyMinutes: 0
+  });
+
   const [trips, setTrips] = useState([]);
-  const [users, setUsers] = useState([]);
 
-  const [loadingTrips, setLoadingTrips] = useState(true);
+  const [loading, setLoading] =
+    useState(true);
+
+  const [lastUpdated, setLastUpdated] =
+    useState(null);
 
 
   // ==========================================
-  // FETCH ACTIVE TRIPS
+  // FETCH ANALYTICS + HISTORY
   // ==========================================
 
-  const fetchActiveTrips = async () => {
+  const fetchHistory = async () => {
 
     try {
 
-      const response = await axios.get(
-        "http://localhost:5000/api/trips/active"
+      const response =
+        await axios.get(
+          "http://localhost:5000/api/trips/history"
+        );
+
+      setAnalytics(
+        response.data.analytics || {}
       );
 
       setTrips(
         response.data.trips || []
       );
 
-      setLoadingTrips(false);
+      setLastUpdated(
+        new Date()
+      );
+
+      setLoading(false);
 
     } catch (error) {
 
       console.error(
-        "Failed to fetch trips:",
+        "Failed to fetch trip analytics:",
         error
       );
 
-      setLoadingTrips(false);
+      setLoading(false);
 
     }
 
@@ -43,74 +64,125 @@ function AdminDashboard() {
 
 
   // ==========================================
-  // LOAD DATA
+  // AUTO REFRESH
   // ==========================================
 
   useEffect(() => {
 
-    fetchActiveTrips();
-
+    fetchHistory();
 
     const interval =
       setInterval(() => {
 
-        fetchActiveTrips();
+        fetchHistory();
 
       }, 5000);
 
-
     return () => {
-
       clearInterval(interval);
-
     };
 
   }, []);
 
 
   // ==========================================
-  // CALCULATE STATISTICS
+  // PRIORITY STYLE
   // ==========================================
 
-  const activeAmbulances =
-    trips.length;
+  const getPriorityStyle =
+    (priority) => {
+
+      if (
+        priority === "Critical"
+      ) {
+
+        return {
+          background: "#fee2e2",
+          color: "#b91c1c"
+        };
+
+      }
+
+      if (
+        priority === "Serious"
+      ) {
+
+        return {
+          background: "#fef3c7",
+          color: "#92400e"
+        };
+
+      }
+
+      return {
+        background: "#dcfce7",
+        color: "#166534"
+      };
+
+    };
 
 
-  const criticalCases =
-    trips.filter(
-      (trip) =>
-        trip.priority === "Critical"
-    ).length;
+  // ==========================================
+  // STATUS STYLE
+  // ==========================================
+
+  const getStatusStyle =
+    (status) => {
+
+      if (
+        status === "ACTIVE"
+      ) {
+
+        return {
+          background: "#dbeafe",
+          color: "#1d4ed8"
+        };
+
+      }
+
+      if (
+        status === "COMPLETED"
+      ) {
+
+        return {
+          background: "#dcfce7",
+          color: "#166534"
+        };
+
+      }
+
+      return {
+        background: "#f1f5f9",
+        color: "#475569"
+      };
+
+    };
 
 
-  const seriousCases =
-    trips.filter(
-      (trip) =>
-        trip.priority === "Serious"
-    ).length;
+  // ==========================================
+  // DATE FORMAT
+  // ==========================================
+
+  const formatDate =
+    (date) => {
+
+      if (!date) {
+        return "—";
+      }
+
+      return new Date(
+        date
+      ).toLocaleString();
+
+    };
 
 
-  const moderateCases =
-    trips.filter(
-      (trip) =>
-        trip.priority === "Moderate"
-    ).length;
+  // ==========================================
+  // JOURNEY TIME
+  // ==========================================
 
-
-  const clearedTrips =
-    trips.filter(
-      (trip) =>
-        trip.trafficClearance ===
-        "CLEARED"
-    ).length;
-
-
-  const preparingTrips =
-    trips.filter(
-      (trip) =>
-        trip.trafficClearance ===
-        "PREPARING"
-    ).length;
+  const averageTime =
+    analytics.averageJourneyMinutes || 0;
 
 
   return (
@@ -121,14 +193,14 @@ function AdminDashboard() {
         background: "#eef6fb",
         fontFamily:
           "Arial, sans-serif",
-        paddingBottom: "40px"
+        paddingBottom: "50px"
       }}
     >
 
 
-      {/* ===================================== */}
-      {/* HEADER */}
-      {/* ===================================== */}
+      {/* ======================================
+          HEADER
+      ====================================== */}
 
       <header
         style={{
@@ -137,41 +209,68 @@ function AdminDashboard() {
           boxShadow:
             "0 2px 10px rgba(0,0,0,0.08)",
           display: "flex",
+          justifyContent:
+            "space-between",
           alignItems: "center",
+          flexWrap: "wrap",
           gap: "15px"
         }}
       >
 
         <div
           style={{
-            fontSize: "45px"
+            display: "flex",
+            alignItems: "center",
+            gap: "15px"
           }}
         >
-          👨‍💼
+
+          <div
+            style={{
+              fontSize: "45px"
+            }}
+          >
+            👨‍💼
+          </div>
+
+          <div>
+
+            <h1
+              style={{
+                margin: 0,
+                color: "#1e3a5f"
+              }}
+            >
+              Admin Dashboard
+            </h1>
+
+            <p
+              style={{
+                margin:
+                  "5px 0 0",
+                color: "#64748b"
+              }}
+            >
+              Smart Ambulance System
+              Administration
+            </p>
+
+          </div>
+
         </div>
 
 
-        <div>
-
-          <h1
-            style={{
-              margin: 0,
-              color: "#1e3a5f"
-            }}
-          >
-            Administrator Dashboard
-          </h1>
-
-
-          <p
-            style={{
-              margin: "5px 0 0",
-              color: "#64748b"
-            }}
-          >
-            Smart Ambulance System Management
-          </p>
-
+        <div
+          style={{
+            background: "#dcfce7",
+            color: "#166534",
+            padding:
+              "10px 18px",
+            borderRadius: "20px",
+            fontWeight: "bold"
+          }}
+        >
+          🟢 System Online
         </div>
 
       </header>
@@ -179,37 +278,75 @@ function AdminDashboard() {
 
       <main
         style={{
-          maxWidth: "1500px",
-          margin: "30px auto",
-          padding: "0 25px"
+          maxWidth: "1400px",
+          margin:
+            "30px auto",
+          padding:
+            "0 25px"
         }}
       >
 
 
-        {/* ===================================== */}
-        {/* SYSTEM OVERVIEW */}
-        {/* ===================================== */}
+        {/* ======================================
+            WELCOME
+        ====================================== */}
 
-        <h2
+        <section
           style={{
-            color: "#1e3a5f",
-            marginBottom: "20px"
+            background:
+              "linear-gradient(135deg, #ffffff, #eef7ff)",
+            borderRadius: "15px",
+            padding: "30px",
+            marginBottom: "30px",
+            boxShadow:
+              "0 5px 18px rgba(0,0,0,0.08)"
           }}
         >
-          📊 System Overview
-        </h2>
+
+          <h2
+            style={{
+              marginTop: 0,
+              color: "#1e3a5f"
+            }}
+          >
+            Welcome, Administrator 👋
+          </h2>
+
+          <p
+            style={{
+              color: "#64748b",
+              fontSize: "16px",
+              lineHeight: "1.6",
+              marginBottom: 0
+            }}
+          >
+            Monitor emergency trips,
+            ambulance activity,
+            emergency priorities,
+            completed journeys and
+            system performance from
+            one centralized dashboard.
+          </p>
+
+        </section>
 
 
-        <div
+        {/* ======================================
+            MAIN ANALYTICS CARDS
+        ====================================== */}
+
+        <section
           style={{
             display: "grid",
             gridTemplateColumns:
-              "repeat(auto-fit, minmax(220px, 1fr))",
+              "repeat(auto-fit, minmax(210px, 1fr))",
             gap: "20px",
-            marginBottom: "35px"
+            marginBottom: "30px"
           }}
         >
 
+
+          {/* TOTAL TRIPS */}
 
           <div style={cardStyle}>
 
@@ -220,11 +357,11 @@ function AdminDashboard() {
             <div>
 
               <p style={labelStyle}>
-                Active Ambulances
+                Total Trips
               </p>
 
               <h2 style={valueStyle}>
-                {activeAmbulances}
+                {analytics.totalTrips}
               </h2>
 
             </div>
@@ -232,20 +369,27 @@ function AdminDashboard() {
           </div>
 
 
+          {/* ACTIVE */}
+
           <div style={cardStyle}>
 
             <div style={iconStyle}>
-              🚨
+              🔵
             </div>
 
             <div>
 
               <p style={labelStyle}>
-                Active Emergencies
+                Active Trips
               </p>
 
-              <h2 style={valueStyle}>
-                {trips.length}
+              <h2
+                style={{
+                  ...valueStyle,
+                  color: "#2563eb"
+                }}
+              >
+                {analytics.activeTrips}
               </h2>
 
             </div>
@@ -253,20 +397,27 @@ function AdminDashboard() {
           </div>
 
 
+          {/* COMPLETED */}
+
           <div style={cardStyle}>
 
             <div style={iconStyle}>
-              🏥
+              ✅
             </div>
 
             <div>
 
               <p style={labelStyle}>
-                Hospitals
+                Completed Trips
               </p>
 
-              <h2 style={valueStyle}>
-                1
+              <h2
+                style={{
+                  ...valueStyle,
+                  color: "#16a34a"
+                }}
+              >
+                {analytics.completedTrips}
               </h2>
 
             </div>
@@ -274,123 +425,30 @@ function AdminDashboard() {
           </div>
 
 
+          {/* AVERAGE TIME */}
+
           <div style={cardStyle}>
 
             <div style={iconStyle}>
-              👮
+              ⏱️
             </div>
 
             <div>
 
               <p style={labelStyle}>
-                Traffic Police
+                Avg Journey Time
               </p>
 
-              <h2 style={valueStyle}>
-                1
+              <h2
+                style={{
+                  ...valueStyle,
+                  color: "#7c3aed"
+                }}
+              >
+                {averageTime}
+                {" "}
+                min
               </h2>
-
-            </div>
-
-          </div>
-
-
-        </div>
-
-
-        {/* ===================================== */}
-        {/* EMERGENCY STATISTICS */}
-        {/* ===================================== */}
-
-        <section
-          style={{
-            background: "white",
-            borderRadius: "15px",
-            padding: "30px",
-            boxShadow:
-              "0 5px 18px rgba(0,0,0,0.08)",
-            marginBottom: "30px"
-          }}
-        >
-
-          <h2
-            style={{
-              marginTop: 0,
-              color: "#1e3a5f"
-            }}
-          >
-            🚨 Emergency Statistics
-          </h2>
-
-
-          <div
-            style={{
-              display: "grid",
-              gridTemplateColumns:
-                "repeat(auto-fit, minmax(200px, 1fr))",
-              gap: "20px"
-            }}
-          >
-
-            <div
-              style={statStyle}
-            >
-
-              <strong>
-                Critical
-              </strong>
-
-              <span
-                style={{
-                  color: "#dc2626",
-                  fontSize: "28px",
-                  fontWeight: "bold"
-                }}
-              >
-                {criticalCases}
-              </span>
-
-            </div>
-
-
-            <div
-              style={statStyle}
-            >
-
-              <strong>
-                Serious
-              </strong>
-
-              <span
-                style={{
-                  color: "#ca8a04",
-                  fontSize: "28px",
-                  fontWeight: "bold"
-                }}
-              >
-                {seriousCases}
-              </span>
-
-            </div>
-
-
-            <div
-              style={statStyle}
-            >
-
-              <strong>
-                Moderate
-              </strong>
-
-              <span
-                style={{
-                  color: "#2563eb",
-                  fontSize: "28px",
-                  fontWeight: "bold"
-                }}
-              >
-                {moderateCases}
-              </span>
 
             </div>
 
@@ -399,18 +457,18 @@ function AdminDashboard() {
         </section>
 
 
-        {/* ===================================== */}
-        {/* TRAFFIC COORDINATION */}
-        {/* ===================================== */}
+        {/* ======================================
+            EMERGENCY PRIORITY ANALYTICS
+        ====================================== */}
 
         <section
           style={{
             background: "white",
             borderRadius: "15px",
             padding: "30px",
+            marginBottom: "30px",
             boxShadow:
-              "0 5px 18px rgba(0,0,0,0.08)",
-            marginBottom: "30px"
+              "0 5px 18px rgba(0,0,0,0.08)"
           }}
         >
 
@@ -420,7 +478,7 @@ function AdminDashboard() {
               color: "#1e3a5f"
             }}
           >
-            🚦 Traffic Coordination
+            📊 Emergency Priority Analytics
           </h2>
 
 
@@ -433,60 +491,129 @@ function AdminDashboard() {
             }}
           >
 
-            <div style={trafficCardStyle}>
 
-              <h3>
-                🟡 Preparing
-              </h3>
+            {/* CRITICAL */}
+
+            <div
+              style={{
+                background: "#fff1f2",
+                border:
+                  "1px solid #fecdd3",
+                borderRadius: "12px",
+                padding: "25px"
+              }}
+            >
+
+              <div
+                style={{
+                  fontSize: "30px"
+                }}
+              >
+                🚨
+              </div>
 
               <p
                 style={{
-                  fontSize: "30px",
-                  fontWeight: "bold",
-                  color: "#ca8a04"
+                  color: "#64748b",
+                  marginBottom: "5px"
                 }}
               >
-                {preparingTrips}
+                Critical Emergencies
               </p>
+
+              <h2
+                style={{
+                  margin: 0,
+                  color: "#dc2626",
+                  fontSize: "32px"
+                }}
+              >
+                {analytics.criticalTrips}
+              </h2>
 
             </div>
 
 
-            <div style={trafficCardStyle}>
+            {/* SERIOUS */}
 
-              <h3>
-                🟢 Cleared
-              </h3>
+            <div
+              style={{
+                background: "#fffbeb",
+                border:
+                  "1px solid #fde68a",
+                borderRadius: "12px",
+                padding: "25px"
+              }}
+            >
+
+              <div
+                style={{
+                  fontSize: "30px"
+                }}
+              >
+                ⚠️
+              </div>
 
               <p
                 style={{
-                  fontSize: "30px",
-                  fontWeight: "bold",
-                  color: "#15803d"
+                  color: "#64748b",
+                  marginBottom: "5px"
                 }}
               >
-                {clearedTrips}
+                Serious Emergencies
               </p>
+
+              <h2
+                style={{
+                  margin: 0,
+                  color: "#d97706",
+                  fontSize: "32px"
+                }}
+              >
+                {analytics.seriousTrips}
+              </h2>
 
             </div>
 
 
-            <div style={trafficCardStyle}>
+            {/* MODERATE */}
 
-              <h3>
-                🚦 Active Coordination
-              </h3>
+            <div
+              style={{
+                background: "#f0fdf4",
+                border:
+                  "1px solid #bbf7d0",
+                borderRadius: "12px",
+                padding: "25px"
+              }}
+            >
+
+              <div
+                style={{
+                  fontSize: "30px"
+                }}
+              >
+                🟢
+              </div>
 
               <p
                 style={{
-                  fontSize: "30px",
-                  fontWeight: "bold",
-                  color: "#2563eb"
+                  color: "#64748b",
+                  marginBottom: "5px"
                 }}
               >
-                {preparingTrips +
-                  clearedTrips}
+                Moderate Emergencies
               </p>
+
+              <h2
+                style={{
+                  margin: 0,
+                  color: "#16a34a",
+                  fontSize: "32px"
+                }}
+              >
+                {analytics.moderateTrips}
+              </h2>
 
             </div>
 
@@ -495,15 +622,16 @@ function AdminDashboard() {
         </section>
 
 
-        {/* ===================================== */}
-        {/* ACTIVE EMERGENCY TRIPS */}
-        {/* ===================================== */}
+        {/* ======================================
+            SYSTEM OVERVIEW
+        ====================================== */}
 
         <section
           style={{
             background: "white",
             borderRadius: "15px",
             padding: "30px",
+            marginBottom: "30px",
             boxShadow:
               "0 5px 18px rgba(0,0,0,0.08)"
           }}
@@ -515,119 +643,413 @@ function AdminDashboard() {
               color: "#1e3a5f"
             }}
           >
-            🚑 Active Emergency Trips
+            📡 System Overview
           </h2>
 
 
-          {loadingTrips ? (
+          <div
+            style={{
+              display: "grid",
+              gridTemplateColumns:
+                "repeat(auto-fit, minmax(220px, 1fr))",
+              gap: "20px"
+            }}
+          >
 
-            <p>
-              Loading emergency trips...
-            </p>
+            <div style={overviewStyle}>
+
+              <span>
+                🚑 Ambulance
+              </span>
+
+              <strong
+                style={{
+                  color: "#15803d"
+                }}
+              >
+                ACTIVE
+              </strong>
+
+            </div>
+
+
+            <div style={overviewStyle}>
+
+              <span>
+                👮 Police Coordination
+              </span>
+
+              <strong
+                style={{
+                  color: "#15803d"
+                }}
+              >
+                ACTIVE
+              </strong>
+
+            </div>
+
+
+            <div style={overviewStyle}>
+
+              <span>
+                🏥 Hospital Coordination
+              </span>
+
+              <strong
+                style={{
+                  color: "#15803d"
+                }}
+              >
+                ACTIVE
+              </strong>
+
+            </div>
+
+
+            <div style={overviewStyle}>
+
+              <span>
+                🚦 Traffic Management
+              </span>
+
+              <strong
+                style={{
+                  color: "#15803d"
+                }}
+              >
+                ACTIVE
+              </strong>
+
+            </div>
+
+          </div>
+
+        </section>
+
+
+        {/* ======================================
+            EMERGENCY HISTORY
+        ====================================== */}
+
+        <section
+          style={{
+            background: "white",
+            borderRadius: "15px",
+            padding: "30px",
+            boxShadow:
+              "0 5px 18px rgba(0,0,0,0.08)"
+          }}
+        >
+
+          <div
+            style={{
+              display: "flex",
+              justifyContent:
+                "space-between",
+              alignItems: "center",
+              flexWrap: "wrap",
+              gap: "10px",
+              marginBottom: "20px"
+            }}
+          >
+
+            <div>
+
+              <h2
+                style={{
+                  margin: 0,
+                  color: "#1e3a5f"
+                }}
+              >
+                📜 Emergency Trip History
+              </h2>
+
+              <p
+                style={{
+                  color: "#64748b",
+                  marginBottom: 0
+                }}
+              >
+                Complete record of ambulance
+                emergency journeys.
+              </p>
+
+            </div>
+
+
+            <span
+              style={{
+                background: "#eff6ff",
+                color: "#1d4ed8",
+                padding:
+                  "8px 14px",
+                borderRadius: "20px",
+                fontSize: "13px",
+                fontWeight: "bold"
+              }}
+            >
+              Auto Refresh: 5 sec
+            </span>
+
+          </div>
+
+
+          {loading ? (
+
+            <div
+              style={{
+                textAlign: "center",
+                padding: "40px",
+                color: "#64748b"
+              }}
+            >
+              Loading journey history...
+            </div>
 
           ) : trips.length === 0 ? (
 
             <div
               style={{
-                padding: "30px",
-                background:
-                  "#f8fafc",
-                borderRadius: "10px",
                 textAlign: "center",
+                padding: "40px",
+                background: "#f8fafc",
+                borderRadius: "10px",
                 color: "#64748b"
               }}
             >
-
-              No active emergency trips.
-
+              📜 No emergency trips recorded yet.
             </div>
 
           ) : (
 
-            trips.map((trip) => (
+            <div
+              style={{
+                overflowX: "auto"
+              }}
+            >
 
-              <div
-                key={trip._id}
+              <table
                 style={{
-                  border:
-                    "1px solid #dbe4ee",
-                  borderRadius: "12px",
-                  padding: "20px",
-                  marginBottom: "15px",
-                  background:
-                    "#fbfdff"
+                  width: "100%",
+                  borderCollapse:
+                    "collapse",
+                  minWidth: "1000px"
                 }}
               >
 
-                <h3
-                  style={{
-                    color: "#1e3a5f"
-                  }}
-                >
-                  🚑 {trip.ambulanceId}
-                </h3>
+                <thead>
 
-
-                <p>
-                  <strong>
-                    Priority:
-                  </strong>{" "}
-                  {trip.priority}
-                </p>
-
-
-                <p>
-                  <strong>
-                    Hospital:
-                  </strong>{" "}
-                  {trip.hospital}
-                </p>
-
-
-                <p>
-                  <strong>
-                    Traffic Clearance:
-                  </strong>{" "}
-
-                  <span
+                  <tr
                     style={{
-                      fontWeight: "bold",
-                      color:
-                        trip.trafficClearance ===
-                        "CLEARED"
-                          ? "#15803d"
-                          : trip.trafficClearance ===
-                            "PREPARING"
-                          ? "#ca8a04"
-                          : "#64748b"
+                      background:
+                        "#f1f5f9"
                     }}
                   >
-                    {trip.trafficClearance ||
-                      "PENDING"}
-                  </span>
 
-                </p>
+                    <th style={thStyle}>
+                      Ambulance
+                    </th>
+
+                    <th style={thStyle}>
+                      Priority
+                    </th>
+
+                    <th style={thStyle}>
+                      Hospital
+                    </th>
+
+                    <th style={thStyle}>
+                      Status
+                    </th>
+
+                    <th style={thStyle}>
+                      Started
+                    </th>
+
+                    <th style={thStyle}>
+                      Completed
+                    </th>
+
+                  </tr>
+
+                </thead>
 
 
-                <p>
-                  <strong>
-                    Location:
-                  </strong>{" "}
+                <tbody>
 
-                  {trip.currentLocation?.latitude?.toFixed(6)}
-                  {" , "}
-                  {trip.currentLocation?.longitude?.toFixed(6)}
+                  {trips.map(
+                    (trip) => (
 
-                </p>
+                      <tr
+                        key={
+                          trip._id
+                        }
+                        style={{
+                          borderBottom:
+                            "1px solid #e2e8f0"
+                        }}
+                      >
 
-              </div>
+                        <td
+                          style={
+                            tdStyle
+                          }
+                        >
 
-            ))
+                          <strong
+                            style={{
+                              color:
+                                "#1e3a5f"
+                            }}
+                          >
+                            🚑{" "}
+                            {
+                              trip.ambulanceId
+                            }
+                          </strong>
+
+                        </td>
+
+
+                        <td
+                          style={
+                            tdStyle
+                          }
+                        >
+
+                          <span
+                            style={{
+                              ...badgeStyle,
+                              ...getPriorityStyle(
+                                trip.priority
+                              )
+                            }}
+                          >
+                            {
+                              trip.priority
+                            }
+                          </span>
+
+                        </td>
+
+
+                        <td
+                          style={
+                            tdStyle
+                          }
+                        >
+
+                          🏥{" "}
+                          {
+                            trip.hospital
+                          }
+
+                        </td>
+
+
+                        <td
+                          style={
+                            tdStyle
+                          }
+                        >
+
+                          <span
+                            style={{
+                              ...badgeStyle,
+                              ...getStatusStyle(
+                                trip.status
+                              )
+                            }}
+                          >
+                            {
+                              trip.status
+                            }
+                          </span>
+
+                        </td>
+
+
+                        <td
+                          style={
+                            tdStyle
+                          }
+                        >
+
+                          {
+                            formatDate(
+                              trip.createdAt
+                            )
+                          }
+
+                        </td>
+
+
+                        <td
+                          style={
+                            tdStyle
+                          }
+                        >
+
+                          {
+                            formatDate(
+                              trip.completedAt
+                            )
+                          }
+
+                        </td>
+
+                      </tr>
+
+                    )
+                  )}
+
+                </tbody>
+
+              </table>
+
+            </div>
 
           )}
 
         </section>
 
+
+        {/* ======================================
+            LAST UPDATED
+        ====================================== */}
+
+        <div
+          style={{
+            textAlign: "center",
+            marginTop: "25px",
+            color: "#64748b",
+            fontSize: "14px"
+          }}
+        >
+
+          {lastUpdated
+            ? `Last updated: ${lastUpdated.toLocaleTimeString()}`
+            : "Waiting for system data..."}
+
+        </div>
+
+
+        {/* ======================================
+            FOOTER
+        ====================================== */}
+
+        <div
+          style={{
+            textAlign: "center",
+            marginTop: "15px",
+            color: "#64748b",
+            fontSize: "14px"
+          }}
+        >
+          Smart Ambulance Emergency
+          Coordination System © 2026
+        </div>
 
       </main>
 
@@ -648,7 +1070,7 @@ const cardStyle = {
 
   borderRadius: "15px",
 
-  padding: "25px",
+  padding: "24px",
 
   display: "flex",
 
@@ -664,7 +1086,7 @@ const cardStyle = {
 
 const iconStyle = {
 
-  fontSize: "40px"
+  fontSize: "38px"
 
 };
 
@@ -675,14 +1097,15 @@ const labelStyle = {
 
   color: "#64748b",
 
-  fontSize: "15px"
+  fontSize: "14px"
 
 };
 
 
 const valueStyle = {
 
-  margin: "5px 0 0",
+  margin:
+    "6px 0 0",
 
   color: "#1e3a5f",
 
@@ -691,7 +1114,7 @@ const valueStyle = {
 };
 
 
-const statStyle = {
+const overviewStyle = {
 
   background: "#f8fafc",
 
@@ -701,22 +1124,66 @@ const statStyle = {
 
   display: "flex",
 
-  justifyContent: "space-between",
+  justifyContent:
+    "space-between",
 
-  alignItems: "center"
+  alignItems: "center",
+
+  gap: "15px"
 
 };
 
 
-const trafficCardStyle = {
+const badgeStyle = {
 
-  background: "#f8fafc",
+  display:
+    "inline-block",
 
-  padding: "20px",
+  padding:
+    "7px 12px",
 
-  borderRadius: "10px",
+  borderRadius:
+    "20px",
 
-  textAlign: "center"
+  fontSize:
+    "12px",
+
+  fontWeight:
+    "bold"
+
+};
+
+
+const thStyle = {
+
+  padding:
+    "15px",
+
+  textAlign:
+    "left",
+
+  color:
+    "#475569",
+
+  fontSize:
+    "14px",
+
+  borderBottom:
+    "2px solid #e2e8f0"
+
+};
+
+
+const tdStyle = {
+
+  padding:
+    "16px 15px",
+
+  color:
+    "#475569",
+
+  fontSize:
+    "14px"
 
 };
 

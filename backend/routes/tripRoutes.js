@@ -10,7 +10,7 @@ const router = express.Router();
 
 
 // ==========================================
-// START TRIP
+// START EMERGENCY TRIP
 // ==========================================
 
 router.post("/start", async (req, res) => {
@@ -21,35 +21,70 @@ router.post("/start", async (req, res) => {
       ambulanceId,
       priority,
       hospital,
-      startLocation
+      startLocation,
+      latitude,
+      longitude
     } = req.body;
 
+
+    // ========================================
+    // SUPPORT BOTH LOCATION FORMATS
+    // ========================================
+
+    let finalStartLocation = startLocation;
+
+    if (
+      !finalStartLocation &&
+      latitude !== undefined &&
+      longitude !== undefined
+    ) {
+
+      finalStartLocation = {
+        latitude: Number(latitude),
+        longitude: Number(longitude)
+      };
+
+    }
+
+
+    // ========================================
+    // VALIDATION
+    // ========================================
 
     if (
       !ambulanceId ||
       !priority ||
       !hospital ||
-      !startLocation
+      !finalStartLocation
     ) {
 
       return res.status(400).json({
+
         message:
-          "Please provide ambulanceId, priority, hospital, and startLocation"
+          "Please provide ambulanceId, priority, hospital, and location"
+
       });
 
     }
 
 
+    // ========================================
+    // CREATE TRIP
+    // ========================================
+
     const trip = await Trip.create({
 
       ambulanceId,
+
       priority,
+
       hospital,
 
-      startLocation,
+      startLocation:
+        finalStartLocation,
 
       currentLocation:
-        startLocation,
+        finalStartLocation,
 
       status:
         "ACTIVE",
@@ -94,7 +129,7 @@ router.post("/start", async (req, res) => {
 
 
 // ==========================================
-// UPDATE AMBULANCE LOCATION
+// UPDATE LIVE AMBULANCE LOCATION
 // ==========================================
 
 router.put(
@@ -161,9 +196,9 @@ router.put(
       }
 
 
-      // ====================================
+      // ======================================
       // UPDATE LIVE GPS LOCATION
-      // ====================================
+      // ======================================
 
       trip.currentLocation = {
 
@@ -179,9 +214,9 @@ router.put(
       await trip.save();
 
 
-      // ====================================
+      // ======================================
       // JUNCTION DETECTION SETTINGS
-      // ====================================
+      // ======================================
 
       const detectionRadius =
         1000;
@@ -190,9 +225,9 @@ router.put(
         100;
 
 
-      // ====================================
+      // ======================================
       // CHECK ALL JUNCTIONS
-      // ====================================
+      // ======================================
 
       for (
         const junction of junctions
@@ -216,9 +251,9 @@ router.put(
           Math.round(distance);
 
 
-        // ==================================
+        // ====================================
         // FIND EXISTING ALERT
-        // ==================================
+        // ====================================
 
         const existingAlert =
           await JunctionAlert.findOne({
@@ -232,53 +267,46 @@ router.put(
           });
 
 
-        // ==================================
+        // ====================================
         // JUNCTION WITHIN 1 KM
-        // ==================================
+        // ====================================
 
         if (
           distance <=
           detectionRadius
         ) {
 
-          // ================================
+
+          // ==================================
           // CREATE NEW AUTOMATIC ALERT
-          // ================================
+          // ==================================
 
           if (!existingAlert) {
 
             await JunctionAlert.create({
 
               tripId:
-
                 tripId,
 
               ambulanceId:
-
                 trip.ambulanceId,
 
               junctionName:
-
                 junction.name,
 
               latitude:
-
                 junction.latitude,
 
               longitude:
-
                 junction.longitude,
 
               distanceFromAmbulance:
-
                 roundedDistance,
 
               status:
-
                 "UPCOMING",
 
               priority:
-
                 trip.priority
 
             });
@@ -293,25 +321,19 @@ router.put(
           }
 
 
-          // ================================
+          // ==================================
           // UPDATE EXISTING ALERT
-          // ================================
+          // ==================================
 
           else if (
-
             existingAlert.status !==
-              "PASSED"
-
+            "PASSED"
           ) {
 
-            // --------------------------------
+
+            // ================================
             // CHECK WHETHER AMBULANCE PASSED
-            // --------------------------------
-            //
-            // If the previous recorded
-            // distance was very close to the
-            // junction and the ambulance is
-            // now moving away, mark PASSED.
+            // ================================
 
             if (
 
@@ -351,9 +373,9 @@ router.put(
         }
 
 
-        // ==================================
+        // ====================================
         // JUNCTION OUTSIDE 1 KM
-        // ==================================
+        // ====================================
 
         else if (
 
@@ -364,9 +386,10 @@ router.put(
 
         ) {
 
-          // --------------------------------
+
+          // ================================
           // PASSED CHECK
-          // --------------------------------
+          // ================================
 
           if (
 
@@ -483,6 +506,7 @@ router.get(
       console.error(
 
         "Get active trips error:",
+
         error.message
 
       );
@@ -527,7 +551,9 @@ router.put(
       const validClearances = [
 
         "PENDING",
+
         "PREPARING",
+
         "CLEARED"
 
       ];
@@ -555,13 +581,17 @@ router.put(
           tripId,
 
           {
+
             trafficClearance:
               clearance
+
           },
 
           {
+
             new:
               true
+
           }
 
         );
@@ -594,6 +624,7 @@ router.put(
       console.error(
 
         "Traffic clearance error:",
+
         error.message
 
       );
@@ -616,7 +647,7 @@ router.put(
 
 
 // ==========================================
-// END TRIP
+// END EMERGENCY TRIP
 // ==========================================
 
 router.put(
@@ -649,8 +680,10 @@ router.put(
           },
 
           {
+
             new:
               true
+
           }
 
         );
@@ -668,16 +701,15 @@ router.put(
       }
 
 
-      // ==================================
+      // ====================================
       // MARK REMAINING ALERTS AS PASSED
-      // ==================================
+      // ====================================
 
       await JunctionAlert.updateMany(
 
         {
 
           tripId:
-
             tripId,
 
           status: {
@@ -685,7 +717,9 @@ router.put(
             $in: [
 
               "UPCOMING",
+
               "PREPARING",
+
               "CLEARED"
 
             ]
@@ -719,6 +753,7 @@ router.put(
       console.error(
 
         "End trip error:",
+
         error.message
 
       );
@@ -753,10 +788,15 @@ router.post(
       const {
 
         tripId,
+
         junctionName,
+
         latitude,
+
         longitude,
+
         distanceFromAmbulance,
+
         priority
 
       } = req.body;
@@ -845,6 +885,7 @@ router.post(
       console.error(
 
         "Create junction alert error:",
+
         error.message
 
       );
@@ -867,7 +908,7 @@ router.post(
 
 
 // ==========================================
-// GET JUNCTION ALERTS
+// GET JUNCTION ALERTS FOR TRIP
 // ==========================================
 
 router.get(
@@ -912,6 +953,7 @@ router.get(
       console.error(
 
         "Get junction alerts error:",
+
         error.message
 
       );
@@ -956,8 +998,11 @@ router.put(
       const validStatuses = [
 
         "UPCOMING",
+
         "PREPARING",
+
         "CLEARED",
+
         "PASSED"
 
       ];
@@ -985,12 +1030,16 @@ router.put(
           alertId,
 
           {
+
             status
+
           },
 
           {
+
             new:
               true
+
           }
 
         );
@@ -1023,6 +1072,7 @@ router.put(
       console.error(
 
         "Update junction alert status error:",
+
         error.message
 
       );
@@ -1043,5 +1093,205 @@ router.put(
   }
 );
 
+
+// ==========================================
+// JOURNEY ANALYTICS + TRIP HISTORY
+// ==========================================
+
+router.get(
+  "/history",
+  async (req, res) => {
+
+    try {
+
+      // ====================================
+      // GET ALL TRIPS
+      // ====================================
+
+      const trips =
+        await Trip.find()
+          .sort({
+            createdAt:
+              -1
+          });
+
+
+      // ====================================
+      // BASIC COUNTS
+      // ====================================
+
+      const completedTrips =
+        trips.filter(
+          (trip) =>
+            trip.status ===
+            "COMPLETED"
+        );
+
+
+      const activeTrips =
+        trips.filter(
+          (trip) =>
+            trip.status ===
+            "ACTIVE"
+        );
+
+
+      const criticalTrips =
+        trips.filter(
+          (trip) =>
+            trip.priority ===
+            "Critical"
+        );
+
+
+      const seriousTrips =
+        trips.filter(
+          (trip) =>
+            trip.priority ===
+            "Serious"
+        );
+
+
+      const moderateTrips =
+        trips.filter(
+          (trip) =>
+            trip.priority ===
+            "Moderate"
+        );
+
+
+      // ====================================
+      // AVERAGE JOURNEY TIME
+      // ====================================
+
+      let totalJourneyTime =
+        0;
+
+      let journeyCount =
+        0;
+
+
+      completedTrips.forEach(
+        (trip) => {
+
+          if (
+            trip.createdAt &&
+            trip.completedAt
+          ) {
+
+            const startTime =
+              new Date(
+                trip.createdAt
+              ).getTime();
+
+
+            const endTime =
+              new Date(
+                trip.completedAt
+              ).getTime();
+
+
+            const duration =
+              endTime -
+              startTime;
+
+
+            if (
+              duration > 0
+            ) {
+
+              totalJourneyTime +=
+                duration;
+
+              journeyCount++;
+
+            }
+
+          }
+
+        }
+      );
+
+
+      const averageJourneyMinutes =
+        journeyCount > 0
+          ? Math.round(
+
+              totalJourneyTime /
+              journeyCount /
+              60000
+
+            )
+          : 0;
+
+
+      // ====================================
+      // SEND ANALYTICS
+      // ====================================
+
+      res.status(200).json({
+
+        message:
+          "Trip history retrieved successfully",
+
+        analytics: {
+
+          totalTrips:
+            trips.length,
+
+          activeTrips:
+            activeTrips.length,
+
+          completedTrips:
+            completedTrips.length,
+
+          criticalTrips:
+            criticalTrips.length,
+
+          seriousTrips:
+            seriousTrips.length,
+
+          moderateTrips:
+            moderateTrips.length,
+
+          averageJourneyMinutes
+
+        },
+
+        trips
+
+      });
+
+
+    } catch (error) {
+
+      console.error(
+
+        "Trip history error:",
+
+        error.message
+
+      );
+
+
+      res.status(500).json({
+
+        message:
+          "Server error",
+
+        error:
+          error.message
+
+      });
+
+    }
+
+  }
+);
+
+
+// ==========================================
+// EXPORT ROUTER
+// ==========================================
 
 module.exports = router;
