@@ -40,84 +40,79 @@ const hospitalLocations = {
 
 function AmbulanceDashboard() {
 
+  // ==========================================
+  // AMBULANCE ID
+  // ==========================================
+
+  const [ambulanceId, setAmbulanceId] =
+    useState("AMB-001");
+
+  const [customAmbulanceId, setCustomAmbulanceId] =
+    useState("");
+
 
   // ==========================================
   // TRIP STATE
   // ==========================================
 
-  const [
-    tripStarted,
-    setTripStarted
-  ] = useState(false);
+  const [tripStarted, setTripStarted] =
+    useState(false);
 
-
-  const [
-    tripId,
-    setTripId
-  ] = useState(null);
+  const [tripId, setTripId] =
+    useState(null);
 
 
   // ==========================================
   // EMERGENCY STATE
   // ==========================================
 
-  const [
-    priority,
-    setPriority
-  ] = useState("Critical");
+  const [priority, setPriority] =
+    useState("Critical");
 
-
-  const [
-    hospital,
-    setHospital
-  ] = useState("City Hospital");
+  const [hospital, setHospital] =
+    useState("City Hospital");
 
 
   // ==========================================
   // GPS STATE
   // ==========================================
 
-  const [
-    location,
-    setLocation
-  ] = useState({
+  const [location, setLocation] = useState({
     latitude: null,
     longitude: null
   });
 
-
-  const [
-    gpsStatus,
-    setGpsStatus
-  ] = useState(
-    "Checking GPS..."
-  );
+  const [gpsStatus, setGpsStatus] =
+    useState("Checking GPS...");
 
 
   // ==========================================
-  // TRIP MESSAGE
+  // MESSAGE
   // ==========================================
 
-  const [
-    tripMessage,
-    setTripMessage
-  ] = useState("");
+  const [tripMessage, setTripMessage] =
+    useState("");
 
 
   // ==========================================
   // ROUTE INFORMATION
   // ==========================================
 
-  const [
-    routeDistance,
-    setRouteDistance
-  ] = useState(null);
+  const [routeDistance, setRouteDistance] =
+    useState(null);
+
+  const [routeTime, setRouteTime] =
+    useState(null);
 
 
-  const [
-    routeTime,
-    setRouteTime
-  ] = useState(null);
+  // ==========================================
+  // FINAL AMBULANCE ID
+  // ==========================================
+
+  const finalAmbulanceId =
+    ambulanceId === "CUSTOM"
+      ? customAmbulanceId.trim()
+      : ambulanceId;
 
 
   // ==========================================
@@ -133,7 +128,6 @@ function AmbulanceDashboard() {
       );
 
       return;
-
     }
 
 
@@ -143,20 +137,14 @@ function AmbulanceDashboard() {
         (position) => {
 
           setLocation({
-
             latitude:
               position.coords.latitude,
 
             longitude:
               position.coords.longitude
-
           });
 
-
-          setGpsStatus(
-            "Active"
-          );
-
+          setGpsStatus("Active");
         },
 
 
@@ -167,22 +155,16 @@ function AmbulanceDashboard() {
             error
           );
 
-
           setGpsStatus(
             "Location permission required"
           );
-
         },
 
 
         {
-
           enableHighAccuracy: true,
-
           maximumAge: 5000,
-
           timeout: 10000
-
         }
 
       );
@@ -209,9 +191,7 @@ function AmbulanceDashboard() {
       !tripStarted ||
       !tripId
     ) {
-
       return;
-
     }
 
 
@@ -219,9 +199,7 @@ function AmbulanceDashboard() {
       location.latitude === null ||
       location.longitude === null
     ) {
-
       return;
-
     }
 
 
@@ -235,36 +213,26 @@ function AmbulanceDashboard() {
             `http://localhost:5000/api/trips/update-location/${tripId}`,
 
             {
-
               latitude:
                 location.latitude,
 
               longitude:
                 location.longitude
-
             }
 
           );
 
-
           console.log(
-
             "Live ambulance location sent:",
-
             location.latitude,
-
             location.longitude
-
           );
 
         } catch (error) {
 
           console.error(
-
             "Location update error:",
-
             error
-
           );
 
         }
@@ -273,7 +241,6 @@ function AmbulanceDashboard() {
 
 
     updateLocation();
-
 
   }, [
     location,
@@ -301,16 +268,13 @@ function AmbulanceDashboard() {
         return;
       }
 
-
       setRouteDistance(
         route.distance
       );
 
-
       setRouteTime(
         route.time
       );
-
 
     }, []);
 
@@ -326,24 +290,17 @@ function AmbulanceDashboard() {
         meters === null ||
         meters === undefined
       ) {
-
         return "Calculating...";
-
       }
-
 
       const kilometers =
         meters / 1000;
 
-
-      if (
-        kilometers < 1
-      ) {
+      if (kilometers < 1) {
 
         return `${Math.round(meters)} m`;
 
       }
-
 
       return `${kilometers.toFixed(1)} km`;
 
@@ -361,33 +318,20 @@ function AmbulanceDashboard() {
         seconds === null ||
         seconds === undefined
       ) {
-
         return "Calculating...";
-
       }
-
 
       const minutes =
-        Math.round(
-          seconds / 60
-        );
+        Math.round(seconds / 60);
 
 
-      if (
-        minutes < 1
-      ) {
-
+      if (minutes < 1) {
         return "Less than 1 min";
-
       }
 
 
-      if (
-        minutes === 1
-      ) {
-
+      if (minutes === 1) {
         return "1 minute";
-
       }
 
 
@@ -406,6 +350,18 @@ function AmbulanceDashboard() {
       setTripMessage("");
 
 
+      // CHECK AMBULANCE ID
+
+      if (!finalAmbulanceId) {
+
+        setTripMessage(
+          "❌ Please enter an ambulance ID"
+        );
+
+        return;
+      }
+
+
       // CHECK GPS
 
       if (
@@ -418,7 +374,6 @@ function AmbulanceDashboard() {
         );
 
         return;
-
       }
 
 
@@ -430,9 +385,8 @@ function AmbulanceDashboard() {
             "http://localhost:5000/api/trips/start",
 
             {
-
               ambulanceId:
-                "AMB-001",
+                finalAmbulanceId,
 
               priority:
                 priority,
@@ -445,18 +399,14 @@ function AmbulanceDashboard() {
 
               longitude:
                 location.longitude
-
             }
 
           );
 
 
         console.log(
-
           "Trip created:",
-
           response.data.trip
-
         );
 
 
@@ -469,47 +419,33 @@ function AmbulanceDashboard() {
 
         // START TRIP
 
-        setTripStarted(
-          true
-        );
+        setTripStarted(true);
 
 
         // RESET ROUTE
 
-        setRouteDistance(
-          null
-        );
+        setRouteDistance(null);
 
-
-        setRouteTime(
-          null
-        );
+        setRouteTime(null);
 
 
         setTripMessage(
-          "✅ Emergency trip started successfully"
+          `✅ Emergency trip started for ${finalAmbulanceId}`
         );
 
 
       } catch (error) {
 
         console.error(
-
           "Start trip error:",
-
           error
-
         );
 
 
-        if (
-          error.response
-        ) {
+        if (error.response) {
 
           setTripMessage(
-
             `❌ ${error.response.data.message}`
-
           );
 
         } else {
@@ -537,12 +473,9 @@ function AmbulanceDashboard() {
 
       if (!tripId) {
 
-        setTripStarted(
-          false
-        );
+        setTripStarted(false);
 
         return;
-
       }
 
 
@@ -557,58 +490,37 @@ function AmbulanceDashboard() {
 
 
         console.log(
-
           "Trip completed:",
-
           response.data.trip
-
         );
 
 
-        setTripStarted(
-          false
-        );
+        setTripStarted(false);
 
+        setTripId(null);
 
-        setTripId(
-          null
-        );
+        setRouteDistance(null);
 
-
-        setRouteDistance(
-          null
-        );
-
-
-        setRouteTime(
-          null
-        );
+        setRouteTime(null);
 
 
         setTripMessage(
-          "✅ Emergency trip completed successfully"
+          `✅ ${finalAmbulanceId} trip completed successfully`
         );
 
 
       } catch (error) {
 
         console.error(
-
           "End trip error:",
-
           error
-
         );
 
 
-        if (
-          error.response
-        ) {
+        if (error.response) {
 
           setTripMessage(
-
             `❌ ${error.response.data.message}`
-
           );
 
         } else {
@@ -633,37 +545,23 @@ function AmbulanceDashboard() {
     <div style={styles.page}>
 
 
-      {/* =====================================
-          HEADER
-      ====================================== */}
+      {/* HEADER */}
 
-      <header
-        style={styles.header}
-      >
+      <header style={styles.header}>
 
-        <div
-          style={styles.headerLeft}
-        >
+        <div style={styles.headerLeft}>
 
-          <div
-            style={styles.logo}
-          >
+          <div style={styles.logo}>
             🚑
           </div>
 
-
           <div>
 
-            <h1
-              style={styles.title}
-            >
+            <h1 style={styles.title}>
               Smart Ambulance
             </h1>
 
-
-            <p
-              style={styles.subtitle}
-            >
+            <p style={styles.subtitle}>
               Ambulance Control Dashboard
             </p>
 
@@ -672,13 +570,9 @@ function AmbulanceDashboard() {
         </div>
 
 
-        <div
-          style={styles.status}
-        >
+        <div style={styles.status}>
 
-          <span
-            style={styles.statusDot}
-          />
+          <span style={styles.statusDot} />
 
           System Online
 
@@ -687,31 +581,20 @@ function AmbulanceDashboard() {
       </header>
 
 
-      <main
-        style={styles.main}
-      >
+      <main style={styles.main}>
 
 
-        {/* =====================================
-            WELCOME
-        ====================================== */}
+        {/* WELCOME */}
 
-        <section
-          style={styles.welcomeCard}
-        >
+        <section style={styles.welcomeCard}>
 
           <div>
 
-            <h2
-              style={styles.welcomeTitle}
-            >
+            <h2 style={styles.welcomeTitle}>
               Welcome, Ambulance Team 🚑
             </h2>
 
-
-            <p
-              style={styles.welcomeText}
-            >
+            <p style={styles.welcomeText}>
               Manage your emergency trip,
               GPS location, priority and
               hospital coordination.
@@ -720,17 +603,14 @@ function AmbulanceDashboard() {
           </div>
 
 
-          <div
-            style={styles.ambulanceNumber}
-          >
+          <div style={styles.ambulanceNumber}>
 
             <span>
-              Ambulance ID
+              Active Ambulance
             </span>
 
-
             <strong>
-              AMB-001
+              {finalAmbulanceId || "Not Set"}
             </strong>
 
           </div>
@@ -738,40 +618,24 @@ function AmbulanceDashboard() {
         </section>
 
 
-        {/* =====================================
-            STAT CARDS
-        ====================================== */}
+        {/* STATS */}
 
-        <section
-          style={styles.statsGrid}
-        >
+        <section style={styles.statsGrid}>
 
 
-          {/* GPS */}
+          <div style={styles.statCard}>
 
-          <div
-            style={styles.statCard}
-          >
-
-            <div
-              style={styles.statIcon}
-            >
+            <div style={styles.statIcon}>
               📍
             </div>
 
-
             <div>
 
-              <p
-                style={styles.statLabel}
-              >
+              <p style={styles.statLabel}>
                 GPS Status
               </p>
 
-
-              <h3
-                style={styles.statValue}
-              >
+              <h3 style={styles.statValue}>
                 {gpsStatus}
               </h3>
 
@@ -780,31 +644,19 @@ function AmbulanceDashboard() {
           </div>
 
 
-          {/* EMERGENCY */}
+          <div style={styles.statCard}>
 
-          <div
-            style={styles.statCard}
-          >
-
-            <div
-              style={styles.statIcon}
-            >
+            <div style={styles.statIcon}>
               🚨
             </div>
 
-
             <div>
 
-              <p
-                style={styles.statLabel}
-              >
+              <p style={styles.statLabel}>
                 Emergency
               </p>
 
-
-              <h3
-                style={styles.statValue}
-              >
+              <h3 style={styles.statValue}>
                 {priority}
               </h3>
 
@@ -813,34 +665,20 @@ function AmbulanceDashboard() {
           </div>
 
 
-          {/* ETA */}
+          <div style={styles.statCard}>
 
-          <div
-            style={styles.statCard}
-          >
-
-            <div
-              style={styles.statIcon}
-            >
+            <div style={styles.statIcon}>
               ⏱️
             </div>
 
-
             <div>
 
-              <p
-                style={styles.statLabel}
-              >
+              <p style={styles.statLabel}>
                 ETA
               </p>
 
-
-              <h3
-                style={styles.statValue}
-              >
-                {formatETA(
-                  routeTime
-                )}
+              <h3 style={styles.statValue}>
+                {formatETA(routeTime)}
               </h3>
 
             </div>
@@ -848,31 +686,19 @@ function AmbulanceDashboard() {
           </div>
 
 
-          {/* HOSPITAL */}
+          <div style={styles.statCard}>
 
-          <div
-            style={styles.statCard}
-          >
-
-            <div
-              style={styles.statIcon}
-            >
+            <div style={styles.statIcon}>
               🏥
             </div>
 
-
             <div>
 
-              <p
-                style={styles.statLabel}
-              >
+              <p style={styles.statLabel}>
                 Hospital
               </p>
 
-
-              <h3
-                style={styles.statValue}
-              >
+              <h3 style={styles.statValue}>
                 {hospital}
               </h3>
 
@@ -880,29 +706,21 @@ function AmbulanceDashboard() {
 
           </div>
 
+
         </section>
 
 
-        {/* =====================================
-            ROUTE MAP
-        ====================================== */}
+        {/* ROUTE MAP */}
 
-        <section
-          style={styles.routeCard}
-        >
+        <section style={styles.routeCard}>
 
-          <div
-            style={styles.cardHeader}
-          >
+          <div style={styles.cardHeader}>
 
             <h2>
               🗺️ Smart Route & Live Navigation
             </h2>
 
-
-            <span
-              style={styles.liveBadge}
-            >
+            <span style={styles.liveBadge}>
               LIVE ROUTE
             </span>
 
@@ -938,20 +756,13 @@ function AmbulanceDashboard() {
           />
 
 
-          {/* ROUTE INFORMATION */}
+          <div style={styles.routeInfoGrid}>
 
-          <div
-            style={styles.routeInfoGrid}
-          >
-
-            <div
-              style={styles.routeInfoBox}
-            >
+            <div style={styles.routeInfoBox}>
 
               <span>
                 📏 Route Distance
               </span>
-
 
               <strong>
                 {formatDistance(
@@ -962,32 +773,24 @@ function AmbulanceDashboard() {
             </div>
 
 
-            <div
-              style={styles.routeInfoBox}
-            >
+            <div style={styles.routeInfoBox}>
 
               <span>
                 ⏱️ Estimated Arrival
               </span>
 
-
               <strong>
-                {formatETA(
-                  routeTime
-                )}
+                {formatETA(routeTime)}
               </strong>
 
             </div>
 
 
-            <div
-              style={styles.routeInfoBox}
-            >
+            <div style={styles.routeInfoBox}>
 
               <span>
                 🏥 Destination
               </span>
-
 
               <strong>
                 {hospital}
@@ -1000,35 +803,22 @@ function AmbulanceDashboard() {
         </section>
 
 
-        {/* =====================================
-            DASHBOARD GRID
-        ====================================== */}
+        {/* DASHBOARD GRID */}
 
-        <section
-          style={styles.dashboardGrid}
-        >
+        <section style={styles.dashboardGrid}>
 
 
-          {/* =====================================
-              LIVE MAP
-          ====================================== */}
+          {/* LIVE MAP */}
 
-          <div
-            style={styles.mapCard}
-          >
+          <div style={styles.mapCard}>
 
-            <div
-              style={styles.cardHeader}
-            >
+            <div style={styles.cardHeader}>
 
               <h2>
                 📍 Live Ambulance Location
               </h2>
 
-
-              <span
-                style={styles.liveBadge}
-              >
+              <span style={styles.liveBadge}>
                 LIVE
               </span>
 
@@ -1048,27 +838,18 @@ function AmbulanceDashboard() {
             />
 
 
-            {/* COORDINATES */}
+            <div style={styles.coordinates}>
 
-            <div
-              style={styles.coordinates}
-            >
-
-              <div
-                style={styles.coordinateBox}
-              >
+              <div style={styles.coordinateBox}>
 
                 <span>
                   Latitude
                 </span>
 
-
                 <strong>
 
                   {location.latitude !== null
-
                     ? location.latitude.toFixed(6)
-
                     : "Waiting..."}
 
                 </strong>
@@ -1076,21 +857,16 @@ function AmbulanceDashboard() {
               </div>
 
 
-              <div
-                style={styles.coordinateBox}
-              >
+              <div style={styles.coordinateBox}>
 
                 <span>
                   Longitude
                 </span>
 
-
                 <strong>
 
                   {location.longitude !== null
-
                     ? location.longitude.toFixed(6)
-
                     : "Waiting..."}
 
                 </strong>
@@ -1102,17 +878,11 @@ function AmbulanceDashboard() {
           </div>
 
 
-          {/* =====================================
-              EMERGENCY CONTROL
-          ====================================== */}
+          {/* EMERGENCY CONTROL */}
 
-          <div
-            style={styles.controlCard}
-          >
+          <div style={styles.controlCard}>
 
-            <div
-              style={styles.cardHeader}
-            >
+            <div style={styles.cardHeader}>
 
               <h2>
                 🚨 Emergency Control
@@ -1121,11 +891,88 @@ function AmbulanceDashboard() {
             </div>
 
 
+            {/* AMBULANCE ID */}
+
+            <label style={styles.label}>
+              Ambulance ID
+            </label>
+
+
+            <select
+
+              value={ambulanceId}
+
+              onChange={(e) => {
+
+                setAmbulanceId(
+                  e.target.value
+                );
+
+                setTripMessage("");
+
+              }}
+
+              style={styles.select}
+
+              disabled={tripStarted}
+
+            >
+
+              <option value="AMB-001">
+                AMB-001
+              </option>
+
+              <option value="AMB-002">
+                AMB-002
+              </option>
+
+              <option value="AMB-003">
+                AMB-003
+              </option>
+
+              <option value="AMB-004">
+                AMB-004
+              </option>
+
+              <option value="CUSTOM">
+                ✏️ Enter Custom ID
+              </option>
+
+            </select>
+
+
+            {/* CUSTOM ID */}
+
+            {ambulanceId === "CUSTOM" && (
+
+              <input
+
+                type="text"
+
+                value={
+                  customAmbulanceId
+                }
+
+                onChange={(e) =>
+                  setCustomAmbulanceId(
+                    e.target.value
+                  )
+                }
+
+                placeholder="Example: AMB-101"
+
+                style={styles.input}
+
+                disabled={tripStarted}
+
+              />
+
+            )}
+
+
             {/* PRIORITY */}
 
-            <label
-              style={styles.label}
-            >
+            <label style={styles.label}>
               Emergency Priority
             </label>
 
@@ -1142,9 +989,7 @@ function AmbulanceDashboard() {
 
               style={styles.select}
 
-              disabled={
-                tripStarted
-              }
+              disabled={tripStarted}
 
             >
 
@@ -1152,11 +997,9 @@ function AmbulanceDashboard() {
                 Critical
               </option>
 
-
               <option value="Serious">
                 Serious
               </option>
-
 
               <option value="Moderate">
                 Moderate
@@ -1167,9 +1010,7 @@ function AmbulanceDashboard() {
 
             {/* HOSPITAL */}
 
-            <label
-              style={styles.label}
-            >
+            <label style={styles.label}>
               Destination Hospital
             </label>
 
@@ -1184,21 +1025,15 @@ function AmbulanceDashboard() {
                   e.target.value
                 );
 
-                setRouteDistance(
-                  null
-                );
+                setRouteDistance(null);
 
-                setRouteTime(
-                  null
-                );
+                setRouteTime(null);
 
               }}
 
               style={styles.select}
 
-              disabled={
-                tripStarted
-              }
+              disabled={tripStarted}
 
             >
 
@@ -1206,11 +1041,9 @@ function AmbulanceDashboard() {
                 City Hospital
               </option>
 
-
               <option value="Apollo Hospital">
                 Apollo Hospital
               </option>
-
 
               <option value="Government General Hospital">
                 Government General Hospital
@@ -1225,9 +1058,7 @@ function AmbulanceDashboard() {
 
               <button
 
-                style={
-                  styles.startButton
-                }
+                style={styles.startButton}
 
                 onClick={
                   startTrip
@@ -1243,9 +1074,7 @@ function AmbulanceDashboard() {
 
               <button
 
-                style={
-                  styles.stopButton
-                }
+                style={styles.stopButton}
 
                 onClick={
                   stopTrip
@@ -1265,28 +1094,25 @@ function AmbulanceDashboard() {
             {tripStarted && (
 
               <div
-                style={
-                  styles.tripStatus
-                }
+                style={styles.tripStatus}
               >
 
                 <span
-                  style={
-                    styles.activeDot
-                  }
+                  style={styles.activeDot}
                 />
 
-                Emergency trip is active
-
+                {finalAmbulanceId}
+                {" "}
+                emergency trip is active
 
                 {tripId && (
 
                   <div
-                    style={
-                      styles.tripId
-                    }
+                    style={styles.tripId}
                   >
+
                     Trip ID: {tripId}
+
                   </div>
 
                 )}
@@ -1301,18 +1127,16 @@ function AmbulanceDashboard() {
             {tripMessage && (
 
               <div
+
                 style={{
                   ...styles.message,
 
                   color:
-                    tripMessage.startsWith(
-                      "✅"
-                    )
-
+                    tripMessage.startsWith("✅")
                       ? "#15803d"
-
                       : "#dc2626"
                 }}
+
               >
 
                 {tripMessage}
@@ -1326,17 +1150,11 @@ function AmbulanceDashboard() {
         </section>
 
 
-        {/* =====================================
-            JOURNEY INFORMATION
-        ====================================== */}
+        {/* JOURNEY INFORMATION */}
 
-        <section
-          style={styles.journeyCard}
-        >
+        <section style={styles.journeyCard}>
 
-          <div
-            style={styles.cardHeader}
-          >
+          <div style={styles.cardHeader}>
 
             <h2>
               🛣️ Journey Information
@@ -1345,18 +1163,27 @@ function AmbulanceDashboard() {
           </div>
 
 
-          <div
-            style={styles.journeyGrid}
-          >
+          <div style={styles.journeyGrid}>
 
-            <div
-              style={styles.journeyItem}
-            >
+
+            <div style={styles.journeyItem}>
+
+              <span>
+                Ambulance ID
+              </span>
+
+              <strong>
+                {finalAmbulanceId || "Not Set"}
+              </strong>
+
+            </div>
+
+
+            <div style={styles.journeyItem}>
 
               <span>
                 Starting Point
               </span>
-
 
               <strong>
 
@@ -1372,14 +1199,11 @@ function AmbulanceDashboard() {
             </div>
 
 
-            <div
-              style={styles.journeyItem}
-            >
+            <div style={styles.journeyItem}>
 
               <span>
                 Destination
               </span>
-
 
               <strong>
                 {hospital}
@@ -1388,14 +1212,11 @@ function AmbulanceDashboard() {
             </div>
 
 
-            <div
-              style={styles.journeyItem}
-            >
+            <div style={styles.journeyItem}>
 
               <span>
                 Distance
               </span>
-
 
               <strong>
                 {formatDistance(
@@ -1406,14 +1227,11 @@ function AmbulanceDashboard() {
             </div>
 
 
-            <div
-              style={styles.journeyItem}
-            >
+            <div style={styles.journeyItem}>
 
               <span>
                 Estimated Time
               </span>
-
 
               <strong>
                 {formatETA(
@@ -1423,43 +1241,30 @@ function AmbulanceDashboard() {
 
             </div>
 
+
           </div>
 
         </section>
 
 
-        {/* =====================================
-            TRAFFIC ALERT
-        ====================================== */}
+        {/* TRAFFIC ALERT */}
 
-        <section
-          style={styles.alertCard}
-        >
+        <section style={styles.alertCard}>
 
-          <div
-            style={styles.alertIcon}
-          >
+          <div style={styles.alertIcon}>
             🚦
           </div>
 
-
           <div>
 
-            <h3
-              style={styles.alertTitle}
-            >
+            <h3 style={styles.alertTitle}>
               Traffic Coordination
             </h3>
 
-
-            <p
-              style={styles.alertText}
-            >
-
+            <p style={styles.alertText}>
               Traffic police will receive
               alerts for upcoming junctions
               when an emergency trip is active.
-
             </p>
 
           </div>
@@ -1470,20 +1275,11 @@ function AmbulanceDashboard() {
       </main>
 
 
-      {/* =====================================
-          FOOTER
-      ====================================== */}
-
-      <footer
-        style={styles.footer}
-      >
+      <footer style={styles.footer}>
 
         <p>
-
           Smart Ambulance © 2026 |
-
           Emergency Traffic Coordination Platform
-
         </p>
 
       </footer>
@@ -1501,633 +1297,361 @@ function AmbulanceDashboard() {
 
 const styles = {
 
-
   page: {
-
     minHeight: "100vh",
-
     background: "#f1f7fb",
-
-    fontFamily:
-      "Arial, sans-serif",
-
+    fontFamily: "Arial, sans-serif",
     color: "#1f2937"
-
   },
-
 
   header: {
-
     background: "#0f6fae",
-
     color: "white",
-
     padding: "18px 40px",
-
     display: "flex",
-
-    justifyContent:
-      "space-between",
-
-    alignItems:
-      "center",
-
+    justifyContent: "space-between",
+    alignItems: "center",
     boxShadow:
       "0 3px 10px rgba(0,0,0,0.12)"
-
   },
-
 
   headerLeft: {
-
     display: "flex",
-
     alignItems: "center",
-
     gap: "15px"
-
   },
-
 
   logo: {
-
     fontSize: "45px"
-
   },
-
 
   title: {
-
     margin: "0",
-
     fontSize: "27px"
-
   },
-
 
   subtitle: {
-
     margin: "5px 0 0",
-
     fontSize: "14px",
-
     opacity: "0.9"
-
   },
-
 
   status: {
-
     background:
       "rgba(255,255,255,0.15)",
-
     padding: "9px 15px",
-
     borderRadius: "20px",
-
     fontSize: "14px"
-
   },
-
 
   statusDot: {
-
     display: "inline-block",
-
     width: "9px",
-
     height: "9px",
-
     borderRadius: "50%",
-
     background: "#4ade80",
-
     marginRight: "7px"
-
   },
-
 
   main: {
-
     maxWidth: "1200px",
-
     margin: "0 auto",
-
     padding: "30px 25px"
-
   },
-
 
   welcomeCard: {
-
     background: "white",
-
     borderRadius: "15px",
-
     padding: "25px",
-
     display: "flex",
-
-    justifyContent:
-      "space-between",
-
-    alignItems:
-      "center",
-
+    justifyContent: "space-between",
+    alignItems: "center",
     boxShadow:
       "0 4px 15px rgba(0,0,0,0.07)",
-
     marginBottom: "25px"
-
   },
-
 
   welcomeTitle: {
-
     margin: "0 0 8px",
-
     color: "#0f6fae"
-
   },
-
 
   welcomeText: {
-
     margin: "0",
-
     color: "#64748b"
-
   },
-
 
   ambulanceNumber: {
-
     background: "#eaf5fb",
-
     padding: "15px 25px",
-
     borderRadius: "10px",
-
-    textAlign: "center"
-
+    textAlign: "center",
+    display: "flex",
+    flexDirection: "column",
+    gap: "6px"
   },
-
 
   statsGrid: {
-
     display: "grid",
-
     gridTemplateColumns:
       "repeat(4, 1fr)",
-
     gap: "18px",
-
     marginBottom: "25px"
-
   },
-
 
   statCard: {
-
     background: "white",
-
     padding: "20px",
-
     borderRadius: "12px",
-
     display: "flex",
-
     alignItems: "center",
-
     gap: "15px",
-
     boxShadow:
       "0 4px 15px rgba(0,0,0,0.06)"
-
   },
-
 
   statIcon: {
-
     fontSize: "32px"
-
   },
-
 
   statLabel: {
-
     margin: "0 0 5px",
-
     color: "#64748b",
-
     fontSize: "13px"
-
   },
-
 
   statValue: {
-
     margin: "0",
-
     fontSize: "18px",
-
     color: "#0f6fae"
-
   },
-
 
   routeCard: {
-
     background: "white",
-
     borderRadius: "15px",
-
     padding: "22px",
-
     boxShadow:
       "0 4px 15px rgba(0,0,0,0.07)",
-
     marginBottom: "25px"
-
   },
-
 
   routeInfoGrid: {
-
     display: "grid",
-
     gridTemplateColumns:
       "repeat(3, 1fr)",
-
     gap: "15px",
-
     marginTop: "15px"
-
   },
-
 
   routeInfoBox: {
-
     background: "#f8fafc",
-
     padding: "15px",
-
     borderRadius: "8px",
-
     display: "flex",
-
     flexDirection: "column",
-
     gap: "7px"
-
   },
-
 
   dashboardGrid: {
-
     display: "grid",
-
     gridTemplateColumns:
       "1.5fr 1fr",
-
     gap: "20px",
-
     marginBottom: "25px"
-
   },
-
 
   mapCard: {
-
     background: "white",
-
     borderRadius: "15px",
-
     padding: "22px",
-
     boxShadow:
       "0 4px 15px rgba(0,0,0,0.07)"
-
   },
-
 
   controlCard: {
-
     background: "white",
-
     borderRadius: "15px",
-
     padding: "22px",
-
     boxShadow:
       "0 4px 15px rgba(0,0,0,0.07)"
-
   },
-
 
   cardHeader: {
-
     display: "flex",
-
-    justifyContent:
-      "space-between",
-
+    justifyContent: "space-between",
     alignItems: "center",
-
     marginBottom: "20px"
-
   },
-
 
   liveBadge: {
-
     background: "#dcfce7",
-
     color: "#15803d",
-
     padding: "5px 10px",
-
     borderRadius: "15px",
-
     fontSize: "12px",
-
     fontWeight: "bold"
-
   },
-
 
   coordinates: {
-
     display: "grid",
-
     gridTemplateColumns:
       "1fr 1fr",
-
     gap: "12px",
-
     marginTop: "15px"
-
   },
-
 
   coordinateBox: {
-
     background: "#f8fafc",
-
     padding: "12px",
-
     borderRadius: "8px",
-
     display: "flex",
-
     flexDirection: "column",
-
     gap: "5px"
-
   },
-
 
   label: {
-
     display: "block",
-
     marginTop: "18px",
-
     marginBottom: "7px",
-
     fontWeight: "bold"
-
   },
-
 
   select: {
-
     width: "100%",
-
     padding: "12px",
-
     border:
       "1px solid #cbd5e1",
-
     borderRadius: "7px",
-
     fontSize: "15px",
-
-    background: "white"
-
+    background: "white",
+    boxSizing: "border-box"
   },
 
+  input: {
+    width: "100%",
+    padding: "12px",
+    border:
+      "1px solid #cbd5e1",
+    borderRadius: "7px",
+    fontSize: "15px",
+    background: "white",
+    boxSizing: "border-box",
+    marginTop: "10px"
+  },
 
   startButton: {
-
     width: "100%",
-
     marginTop: "25px",
-
     padding: "14px",
-
     border: "none",
-
     borderRadius: "8px",
-
     background: "#dc2626",
-
     color: "white",
-
     fontSize: "15px",
-
     fontWeight: "bold",
-
     cursor: "pointer"
-
   },
-
 
   stopButton: {
-
     width: "100%",
-
     marginTop: "25px",
-
     padding: "14px",
-
     border: "none",
-
     borderRadius: "8px",
-
     background: "#475569",
-
     color: "white",
-
     fontSize: "15px",
-
     fontWeight: "bold",
-
     cursor: "pointer"
-
   },
-
 
   tripStatus: {
-
     marginTop: "15px",
-
     padding: "12px",
-
     background: "#fef2f2",
-
     color: "#b91c1c",
-
     borderRadius: "7px",
-
     textAlign: "center",
-
     fontWeight: "bold"
-
   },
-
 
   activeDot: {
-
     display: "inline-block",
-
     width: "8px",
-
     height: "8px",
-
     background: "#dc2626",
-
     borderRadius: "50%",
-
     marginRight: "7px"
-
   },
-
 
   tripId: {
-
     marginTop: "7px",
-
     fontSize: "12px",
-
     fontWeight: "normal"
-
   },
-
 
   message: {
-
     marginTop: "15px",
-
     textAlign: "center",
-
     fontWeight: "bold",
-
     fontSize: "14px"
-
   },
-
 
   journeyCard: {
-
     background: "white",
-
     borderRadius: "15px",
-
     padding: "22px",
-
     boxShadow:
       "0 4px 15px rgba(0,0,0,0.07)",
-
     marginBottom: "25px"
-
   },
-
 
   journeyGrid: {
-
     display: "grid",
-
     gridTemplateColumns:
-      "repeat(4, 1fr)",
-
+      "repeat(5, 1fr)",
     gap: "15px"
-
   },
-
 
   journeyItem: {
-
     background: "#f8fafc",
-
     padding: "15px",
-
     borderRadius: "8px",
-
     display: "flex",
-
     flexDirection: "column",
-
     gap: "6px"
-
   },
-
 
   alertCard: {
-
     background: "#fff7ed",
-
     border:
       "1px solid #fed7aa",
-
     borderRadius: "12px",
-
     padding: "18px",
-
     display: "flex",
-
     alignItems: "center",
-
     gap: "15px"
-
   },
-
 
   alertIcon: {
-
     fontSize: "35px"
-
   },
-
 
   alertTitle: {
-
     margin: "0 0 5px",
-
     color: "#c2410c"
-
   },
-
 
   alertText: {
-
     margin: "0",
-
     color: "#7c2d12"
-
   },
 
-
   footer: {
-
     textAlign: "center",
-
     padding: "20px",
-
     color: "#64748b",
-
     fontSize: "13px"
-
   }
 
 };
