@@ -1,8 +1,20 @@
-import { MapContainer, TileLayer, Marker, Popup } from "react-leaflet";
+import {
+  MapContainer,
+  TileLayer,
+  Marker,
+  Popup,
+  useMap
+} from "react-leaflet";
+
 import L from "leaflet";
+import { useEffect } from "react";
+
 import "leaflet/dist/leaflet.css";
 
-// Fix Leaflet marker icons in Vite
+// =====================================================
+// LEAFLET ICON FIX
+// =====================================================
+
 delete L.Icon.Default.prototype._getIconUrl;
 
 L.Icon.Default.mergeOptions({
@@ -16,29 +28,70 @@ L.Icon.Default.mergeOptions({
     "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-shadow.png"
 });
 
-function AmbulanceMap({ latitude, longitude }) {
+// =====================================================
+// MAP CENTER UPDATE
+// =====================================================
 
-  // Default location while GPS is loading
-  const defaultLocation = [16.5062, 80.6480];
+function MapCenterUpdater({ position }) {
+  const map = useMap();
 
-  const position =
-    latitude !== null && longitude !== null
-      ? [latitude, longitude]
-      : defaultLocation;
+  useEffect(() => {
+    if (!position) {
+      return;
+    }
+
+    map.setView(position, 16, {
+      animate: true
+    });
+
+    setTimeout(() => {
+      map.invalidateSize();
+    }, 200);
+
+  }, [map, position]);
+
+  return null;
+}
+
+// =====================================================
+// AMBULANCE MAP
+// =====================================================
+
+function AmbulanceMap({
+  latitude,
+  longitude
+}) {
+
+  const hasLocation =
+    latitude !== null &&
+    latitude !== undefined &&
+    longitude !== null &&
+    longitude !== undefined &&
+    Number.isFinite(Number(latitude)) &&
+    Number.isFinite(Number(longitude));
+
+  const position = hasLocation
+    ? [
+        Number(latitude),
+        Number(longitude)
+      ]
+    : [17.3850, 78.4867];
 
   return (
     <div
       style={{
         width: "100%",
-        height: "320px",
+        height: "350px",
         borderRadius: "12px",
-        overflow: "hidden"
+        overflow: "hidden",
+        position: "relative"
       }}
     >
 
       <MapContainer
         center={position}
-        zoom={15}
+        zoom={hasLocation ? 16 : 12}
+        scrollWheelZoom={true}
         style={{
           width: "100%",
           height: "100%"
@@ -46,27 +99,82 @@ function AmbulanceMap({ latitude, longitude }) {
       >
 
         <TileLayer
-          attribution='&copy; OpenStreetMap contributors'
+          attribution="&copy; OpenStreetMap contributors"
           url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
         />
 
-        {latitude !== null && longitude !== null && (
+        <MapCenterUpdater
+          position={
+            hasLocation
+              ? position
+              : null
+          }
+        />
 
+        {hasLocation && (
           <Marker position={position}>
 
             <Popup>
-              🚑 <strong>Ambulance Location</strong>
-              <br />
-              Latitude: {latitude.toFixed(6)}
-              <br />
-              Longitude: {longitude.toFixed(6)}
+
+              <div
+                style={{
+                  minWidth: "180px"
+                }}
+              >
+
+                <strong>
+                  🚑 Live Ambulance
+                </strong>
+
+                <br />
+
+                <span>
+                  Current GPS Location
+                </span>
+
+                <br />
+                <br />
+
+                <strong>
+                  Latitude:
+                </strong>{" "}
+                {Number(latitude).toFixed(6)}
+
+                <br />
+
+                <strong>
+                  Longitude:
+                </strong>{" "}
+                {Number(longitude).toFixed(6)}
+
+              </div>
+
             </Popup>
 
           </Marker>
-
         )}
 
       </MapContainer>
+
+      {!hasLocation && (
+        <div
+          style={{
+            position: "absolute",
+            top: "12px",
+            left: "12px",
+            zIndex: 1000,
+            background: "white",
+            padding: "10px 14px",
+            borderRadius: "8px",
+            boxShadow:
+              "0 2px 8px rgba(0,0,0,0.2)",
+            fontSize: "13px",
+            color: "#475569"
+          }}
+        >
+          📍 Waiting for current GPS location...
+        </div>
+      )}
 
     </div>
   );

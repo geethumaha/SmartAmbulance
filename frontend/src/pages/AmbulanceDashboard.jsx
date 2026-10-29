@@ -1,7 +1,8 @@
 import {
   useEffect,
   useState,
-  useCallback
+  useCallback,
+  useRef
 } from "react";
 
 import axios from "axios";
@@ -29,6 +30,120 @@ const hospitalLocations = {
   "Government General Hospital": {
     latitude: 17.3895,
     longitude: 78.4760
+  }
+
+};
+
+
+// ==========================================
+// DEMO STARTING LOCATIONS
+// ==========================================
+
+const demoStartingLocations = {
+
+  "CURRENT_GPS": {
+    name: "Current GPS Location",
+    latitude: null,
+    longitude: null
+  },
+
+  "HYDERABAD": {
+    name: "Hyderabad",
+    latitude: 17.3850,
+    longitude: 78.4867
+  },
+
+  "VIJAYAWADA": {
+    name: "Vijayawada",
+    latitude: 16.5062,
+    longitude: 80.6480
+  },
+
+  "VISAKHAPATNAM": {
+    name: "Visakhapatnam",
+    latitude: 17.6868,
+    longitude: 83.2185
+  },
+
+  "VIZIANAGARAM": {
+    name: "Vizianagaram",
+    latitude: 18.1067,
+    longitude: 83.3956
+  },
+
+  "GUNTUR": {
+    name: "Guntur",
+    latitude: 16.3067,
+    longitude: 80.4365
+  },
+
+  "BENGALURU": {
+    name: "Bengaluru",
+    latitude: 12.9716,
+    longitude: 77.5946
+  }
+
+};
+
+
+// ==========================================
+// DESTINATION OPTIONS
+// ==========================================
+
+const destinationOptions = {
+
+  "City Hospital": {
+    name: "City Hospital",
+    latitude: 17.3850,
+    longitude: 78.4867
+  },
+
+  "Apollo Hospital": {
+    name: "Apollo Hospital",
+    latitude: 17.4254,
+    longitude: 78.4111
+  },
+
+  "Government General Hospital": {
+    name: "Government General Hospital",
+    latitude: 17.3895,
+    longitude: 78.4760
+  },
+
+  "Hyderabad": {
+    name: "Hyderabad",
+    latitude: 17.3850,
+    longitude: 78.4867
+  },
+
+  "Vijayawada": {
+    name: "Vijayawada",
+    latitude: 16.5062,
+    longitude: 80.6480
+  },
+
+  "Visakhapatnam": {
+    name: "Visakhapatnam",
+    latitude: 17.6868,
+    longitude: 83.2185
+  },
+
+  "Vizianagaram": {
+    name: "Vizianagaram",
+    latitude: 18.1067,
+    longitude: 83.3956
+  },
+
+  "Guntur": {
+    name: "Guntur",
+    latitude: 16.3067,
+    longitude: 80.4365
+  },
+
+  "Bengaluru": {
+    name: "Bengaluru",
+    latitude: 12.9716,
+    longitude: 77.5946
   }
 
 };
@@ -72,6 +187,43 @@ function AmbulanceDashboard() {
   const [hospital, setHospital] =
     useState("City Hospital");
 
+  // ==========================================
+  // DESTINATION CONTROL
+  // ==========================================
+
+  const [destinationSelection, setDestinationSelection] =
+    useState("City Hospital");
+
+  const [customDestination, setCustomDestination] =
+    useState("");
+
+  const [destinationLocation, setDestinationLocation] =
+    useState(destinationOptions["City Hospital"]);
+
+  const [destinationStatus, setDestinationStatus] =
+    useState("");
+
+  // ==========================================
+  // NEARBY HOSPITALS
+  // ==========================================
+
+  const [nearbyHospitals, setNearbyHospitals] =
+    useState([]);
+
+  const [nearbyHospitalLoading, setNearbyHospitalLoading] =
+    useState(false);
+
+  const [nearbyHospitalStatus, setNearbyHospitalStatus] =
+    useState("");
+
+
+  // ==========================================
+  // DEMO STARTING POINT
+  // ==========================================
+
+  const [startingPoint, setStartingPoint] =
+    useState("CURRENT_GPS");
+
 
   // ==========================================
   // GPS STATE
@@ -82,8 +234,26 @@ function AmbulanceDashboard() {
     longitude: null
   });
 
+  const locationRef = useRef({
+    latitude: null,
+    longitude: null
+  });
+
   const [gpsStatus, setGpsStatus] =
     useState("Checking GPS...");
+
+  const [gpsAccuracy, setGpsAccuracy] =
+    useState(null);
+
+  // Optional manual starting location for laptops when browser GPS is inaccurate.
+  const [manualStartSearch, setManualStartSearch] =
+    useState("");
+
+  const [manualStartLocation, setManualStartLocation] =
+    useState(null);
+
+  const [manualStartStatus, setManualStartStatus] =
+    useState("");
 
 
   // ==========================================
@@ -136,13 +306,18 @@ function AmbulanceDashboard() {
 
         (position) => {
 
-          setLocation({
-            latitude:
-              position.coords.latitude,
+          const currentLocation = {
+            latitude: position.coords.latitude,
+            longitude: position.coords.longitude
+          };
 
-            longitude:
-              position.coords.longitude
-          });
+          locationRef.current = currentLocation;
+
+          setLocation(currentLocation);
+
+          setGpsAccuracy(
+            position.coords.accuracy ?? null
+          );
 
           setGpsStatus("Active");
         },
@@ -191,6 +366,13 @@ function AmbulanceDashboard() {
       !tripStarted ||
       !tripId
     ) {
+      return;
+    }
+
+    // When a fixed demo starting point is selected,
+    // keep that location for the demonstration route.
+    // Live GPS updates are used only in Current GPS mode.
+    if (startingPoint !== "CURRENT_GPS") {
       return;
     }
 
@@ -245,7 +427,8 @@ function AmbulanceDashboard() {
   }, [
     location,
     tripStarted,
-    tripId
+    tripId,
+    startingPoint
   ]);
 
 
@@ -253,8 +436,471 @@ function AmbulanceDashboard() {
   // GET SELECTED HOSPITAL
   // ==========================================
 
-  const selectedHospital =
-    hospitalLocations[hospital] || null;
+  const selectedNearbyHospital =
+    nearbyHospitals.find(
+      (item) =>
+        item.id === destinationSelection
+    );
+
+  const selectedDestination =
+    destinationSelection.startsWith("NEARBY-")
+      ? selectedNearbyHospital
+      : (destinationLocation ||
+        destinationOptions[destinationSelection] ||
+        null);
+
+
+  // ==========================================
+  // FIND CUSTOM DESTINATION
+  // ==========================================
+
+  const findCustomDestination =
+    async () => {
+
+      const query = customDestination.trim();
+
+      if (!query) {
+        setDestinationStatus(
+          "❌ Please enter a destination"
+        );
+        return;
+      }
+
+      setDestinationStatus(
+        "🔎 Finding destination..."
+      );
+
+      try {
+
+        const response =
+          await fetch(
+            `https://nominatim.openstreetmap.org/search?format=json&limit=1&countrycodes=in&q=${encodeURIComponent(query)}`,
+            {
+              headers: {
+                Accept: "application/json"
+              }
+            }
+          );
+
+        if (!response.ok) {
+          throw new Error("Geocoding request failed");
+        }
+
+        const results = await response.json();
+
+        if (!results.length) {
+          setDestinationStatus(
+            "❌ Destination not found. Try a city, hospital, area or landmark."
+          );
+          return;
+        }
+
+        const result = results[0];
+
+        const coordinates = {
+          name: result.display_name,
+          latitude: Number(result.lat),
+          longitude: Number(result.lon)
+        };
+
+        setDestinationLocation(
+          coordinates
+        );
+
+        setHospital(
+          query
+        );
+
+        setDestinationStatus(
+          "✅ Destination found"
+        );
+
+        setRouteDistance(null);
+        setRouteTime(null);
+
+      } catch (error) {
+
+        console.error(
+          "Destination search error:",
+          error
+        );
+
+        setDestinationStatus(
+          "❌ Could not find destination. Please try again."
+        );
+      }
+    };
+
+
+  // ==========================================
+  // SEARCH STARTING LOCATION
+  // ==========================================
+
+  const findManualStartingLocation =
+    async () => {
+
+      const query = manualStartSearch.trim();
+
+      if (!query) {
+        setManualStartStatus(
+          "❌ Enter a place, area, village or address"
+        );
+        return;
+      }
+
+      setManualStartStatus(
+        "🔎 Finding starting location..."
+      );
+
+      try {
+
+        const response = await fetch(
+          `https://nominatim.openstreetmap.org/search?format=json&limit=1&countrycodes=in&q=${encodeURIComponent(query)}`,
+          {
+            headers: {
+              Accept: "application/json"
+            }
+          }
+        );
+
+        if (!response.ok) {
+          throw new Error("Starting location search failed");
+        }
+
+        const results = await response.json();
+
+        if (!results.length) {
+          setManualStartStatus(
+            "❌ Location not found. Try adding district or state."
+          );
+          return;
+        }
+
+        const result = results[0];
+
+        const coordinates = {
+          name: result.display_name,
+          latitude: Number(result.lat),
+          longitude: Number(result.lon)
+        };
+
+        setManualStartLocation(coordinates);
+        setStartingPoint("CURRENT_GPS");
+        setRouteDistance(null);
+        setRouteTime(null);
+
+        setManualStartStatus(
+          `✅ Starting location set to ${result.display_name}`
+        );
+
+      } catch (error) {
+
+        console.error(
+          "Starting location search error:",
+          error
+        );
+
+        setManualStartStatus(
+          "❌ Could not find starting location. Try again."
+        );
+      }
+    };
+
+
+  const clearManualStartingLocation = () => {
+    setManualStartLocation(null);
+    setManualStartSearch("");
+    setManualStartStatus(
+      "📍 Using live browser GPS location"
+    );
+    setRouteDistance(null);
+    setRouteTime(null);
+  };
+
+
+  // ==========================================
+  // FIND NEARBY HOSPITALS
+  // ==========================================
+
+  const findNearbyHospitals =
+    async () => {
+
+      const searchLocation =
+        manualStartLocation ||
+        (startingPoint === "CURRENT_GPS"
+          ? locationRef.current
+          : selectedStartingPoint);
+
+      if (
+        !searchLocation ||
+        searchLocation.latitude === null ||
+        searchLocation.latitude === undefined ||
+        searchLocation.longitude === null ||
+        searchLocation.longitude === undefined
+      ) {
+        setNearbyHospitalStatus(
+          "❌ Location is not available yet. Please wait for GPS."
+        );
+        return;
+      }
+
+      setNearbyHospitalLoading(true);
+      setNearbyHospitalStatus(
+        "🔎 Finding nearby hospitals..."
+      );
+
+      try {
+
+        const latitude = Number(searchLocation.latitude);
+        const longitude = Number(searchLocation.longitude);
+        const radius = 10000;
+
+        if (
+          !Number.isFinite(latitude) ||
+          !Number.isFinite(longitude)
+        ) {
+          throw new Error("Invalid GPS coordinates");
+        }
+
+        const query = `
+          [out:json][timeout:30];
+          (
+            nwr[amenity=hospital](around:${radius},${latitude},${longitude});
+            nwr[healthcare=hospital](around:${radius},${latitude},${longitude});
+          );
+          out center tags;
+        `;
+
+        // Try more than one Overpass server. Public Overpass servers
+        // can temporarily reject requests or become busy.
+        const endpoints = [
+          "https://overpass-api.de/api/interpreter",
+          "https://overpass.kumi.systems/api/interpreter",
+          "https://overpass.private.coffee/api/interpreter"
+        ];
+
+        let data = null;
+        let lastError = null;
+
+        for (const endpoint of endpoints) {
+          try {
+
+            const response = await fetch(
+              `${endpoint}?data=${encodeURIComponent(query)}`,
+              {
+                method: "GET",
+                headers: {
+                  Accept: "application/json"
+                }
+              }
+            );
+
+            if (!response.ok) {
+              throw new Error(
+                `${response.status} ${response.statusText}`
+              );
+            }
+
+            data = await response.json();
+            break;
+
+          } catch (error) {
+            console.warn(
+              `Hospital search endpoint failed: ${endpoint}`,
+              error
+            );
+            lastError = error;
+          }
+        }
+
+        if (!data) {
+          throw new Error(
+            lastError?.message ||
+            "All hospital search servers failed"
+          );
+        }
+
+        const hospitals = (data.elements || [])
+          .map((item) => {
+
+            const hospitalLatitude =
+              item.lat ?? item.center?.lat;
+
+            const hospitalLongitude =
+              item.lon ?? item.center?.lon;
+
+            if (
+              hospitalLatitude === undefined ||
+              hospitalLongitude === undefined
+            ) {
+              return null;
+            }
+
+            const name =
+              item.tags?.name ||
+              item.tags?.official_name ||
+              item.tags?.short_name ||
+              "Unnamed Hospital";
+
+            const distance =
+              calculateDistanceKm(
+                latitude,
+                longitude,
+                Number(hospitalLatitude),
+                Number(hospitalLongitude)
+              );
+
+            return {
+              // Keep the NEARBY- prefix because the destination
+              // selector uses it to recognize nearby hospitals.
+              id: `NEARBY-${item.type}-${item.id}`,
+              name,
+              latitude: Number(hospitalLatitude),
+              longitude: Number(hospitalLongitude),
+              distance
+            };
+
+          })
+          .filter(Boolean)
+          .sort(
+            (a, b) => a.distance - b.distance
+          );
+
+        const uniqueHospitals =
+          hospitals.filter(
+            (hospitalItem, index, array) =>
+              index ===
+              array.findIndex(
+                (item) =>
+                  item.name === hospitalItem.name &&
+                  Math.abs(
+                    item.latitude - hospitalItem.latitude
+                  ) < 0.0001 &&
+                  Math.abs(
+                    item.longitude - hospitalItem.longitude
+                  ) < 0.0001
+              )
+          );
+
+        setNearbyHospitals(
+          uniqueHospitals.slice(0, 20)
+        );
+
+        if (uniqueHospitals.length === 0) {
+          setNearbyHospitalStatus(
+            "⚠️ No hospitals found within 10 km"
+          );
+        } else {
+          setNearbyHospitalStatus(
+            `✅ Found ${Math.min(uniqueHospitals.length, 20)} nearby hospitals`
+          );
+        }
+
+      } catch (error) {
+
+        console.error(
+          "Nearby hospital search error:",
+          error
+        );
+
+        setNearbyHospitalStatus(
+          "❌ Could not load nearby hospitals. Please check your internet connection and try again."
+        );
+
+      } finally {
+        setNearbyHospitalLoading(false);
+      }
+    };
+
+
+  // ==========================================
+  // DISTANCE HELPER
+  // ==========================================
+
+  const calculateDistanceKm =
+    (lat1, lon1, lat2, lon2) => {
+
+      const earthRadius = 6371;
+
+      const dLat =
+        (lat2 - lat1) * Math.PI / 180;
+
+      const dLon =
+        (lon2 - lon1) * Math.PI / 180;
+
+      const a =
+        Math.sin(dLat / 2) ** 2 +
+        Math.cos(lat1 * Math.PI / 180) *
+        Math.cos(lat2 * Math.PI / 180) *
+        Math.sin(dLon / 2) ** 2;
+
+      const c =
+        2 * Math.atan2(
+          Math.sqrt(a),
+          Math.sqrt(1 - a)
+        );
+
+      return earthRadius * c;
+    };
+
+
+  // ==========================================
+  // AUTO REFRESH NEARBY HOSPITALS
+  // ==========================================
+
+  useEffect(() => {
+
+    const effectiveLocation =
+      manualStartLocation ||
+      (startingPoint === "CURRENT_GPS"
+        ? location
+        : selectedStartingPoint);
+
+    if (
+      !effectiveLocation ||
+      effectiveLocation.latitude === null ||
+      effectiveLocation.longitude === null
+    ) {
+      return;
+    }
+
+    findNearbyHospitals();
+
+    const intervalId =
+      setInterval(
+        findNearbyHospitals,
+        60000
+      );
+
+    return () => {
+      clearInterval(intervalId);
+    };
+
+    // Only start the automatic refresh when GPS becomes available.
+    // The ref keeps the latest GPS coordinates without triggering a
+    // hospital API request for every small GPS movement.
+  }, [
+    startingPoint,
+    manualStartLocation?.latitude,
+    manualStartLocation?.longitude,
+    location.latitude !== null &&
+    location.longitude !== null
+  ]);
+
+
+  // ==========================================
+  // SELECTED ROUTE START LOCATION
+  // ==========================================
+
+  const selectedStartingPoint =
+    demoStartingLocations[startingPoint] ||
+    demoStartingLocations.CURRENT_GPS;
+
+  const routeStartLocation =
+    manualStartLocation ||
+    (startingPoint === "CURRENT_GPS"
+      ? location
+      : selectedStartingPoint);
 
 
   // ==========================================
@@ -362,15 +1008,33 @@ function AmbulanceDashboard() {
       }
 
 
-      // CHECK GPS
+      // CHECK STARTING LOCATION
+      const tripStartLocation =
+        manualStartLocation ||
+        (startingPoint === "CURRENT_GPS"
+          ? location
+          : selectedStartingPoint);
 
       if (
-        location.latitude === null ||
-        location.longitude === null
+        tripStartLocation.latitude === null ||
+        tripStartLocation.longitude === null
       ) {
 
         setTripMessage(
-          "❌ GPS location is not available yet"
+          "❌ Starting location is not available yet"
+        );
+
+        return;
+      }
+
+      if (
+        !selectedDestination ||
+        selectedDestination.latitude === null ||
+        selectedDestination.longitude === null
+      ) {
+
+        setTripMessage(
+          "❌ Please select or find a destination first"
         );
 
         return;
@@ -395,10 +1059,10 @@ function AmbulanceDashboard() {
                 hospital,
 
               latitude:
-                location.latitude,
+                tripStartLocation.latitude,
 
               longitude:
-                location.longitude
+                tripStartLocation.longitude
             }
 
           );
@@ -727,33 +1391,28 @@ function AmbulanceDashboard() {
           </div>
 
 
-          <RouteMap
+          
+<RouteMap
+  latitude={routeStartLocation.latitude}
+  longitude={routeStartLocation.longitude}
+  hospitalLatitude={
+    selectedDestination
+      ? selectedDestination.latitude
+      : null
+  }
+  hospitalLongitude={
+    selectedDestination
+      ? selectedDestination.longitude
+      : null
+  }
+  onRouteFound={handleRouteFound}
+  tripId={tripId}
+  ambulanceId={finalAmbulanceId}
+  priority={priority}
+/>
 
-            latitude={
-              location.latitude
-            }
 
-            longitude={
-              location.longitude
-            }
-
-            hospitalLatitude={
-              selectedHospital
-                ? selectedHospital.latitude
-                : null
-            }
-
-            hospitalLongitude={
-              selectedHospital
-                ? selectedHospital.longitude
-                : null
-            }
-
-            onRouteFound={
-              handleRouteFound
-            }
-
-          />
+        
 
 
           <div style={styles.routeInfoGrid}>
@@ -875,6 +1534,23 @@ function AmbulanceDashboard() {
 
             </div>
 
+            <div
+              style={{
+                marginTop: "10px",
+                padding: "10px",
+                background: "#f0fdf4",
+                borderRadius: "8px",
+                color: "#166534",
+                fontSize: "13px"
+              }}
+            >
+              {manualStartLocation
+                ? `📍 Using searched location: ${manualStartLocation.name}`
+                : gpsAccuracy !== null
+                  ? `📡 GPS accuracy: approximately ${Math.round(gpsAccuracy)} m`
+                  : "📡 GPS accuracy: waiting..."}
+            </div>
+
           </div>
 
 
@@ -969,65 +1645,69 @@ function AmbulanceDashboard() {
 
             )}
 
-
-            {/* PRIORITY */}
+            {/* DESTINATION */}
 
             <label style={styles.label}>
-              Emergency Priority
+              Destination
             </label>
-
 
             <select
 
-              value={priority}
-
-              onChange={(e) =>
-                setPriority(
-                  e.target.value
-                )
-              }
-
-              style={styles.select}
-
-              disabled={tripStarted}
-
-            >
-
-              <option value="Critical">
-                Critical
-              </option>
-
-              <option value="Serious">
-                Serious
-              </option>
-
-              <option value="Moderate">
-                Moderate
-              </option>
-
-            </select>
-
-
-            {/* HOSPITAL */}
-
-            <label style={styles.label}>
-              Destination Hospital
-            </label>
-
-
-            <select
-
-              value={hospital}
+              value={destinationSelection}
 
               onChange={(e) => {
 
-                setHospital(
-                  e.target.value
+                const value = e.target.value;
+
+                setDestinationSelection(value);
+
+                setDestinationStatus(
+                  ""
                 );
 
                 setRouteDistance(null);
-
                 setRouteTime(null);
+
+                if (value.startsWith("NEARBY-")) {
+
+                  const selectedNearby =
+                    nearbyHospitals.find(
+                      (item) => item.id === value
+                    );
+
+                  setDestinationLocation(
+                    selectedNearby || null
+                  );
+
+                  setHospital(
+                    selectedNearby
+                      ? selectedNearby.name
+                      : "Nearby Hospital"
+                  );
+
+                } else if (value !== "CUSTOM") {
+
+                  const selected =
+                    destinationOptions[value];
+
+                  setDestinationLocation(
+                    selected
+                  );
+
+                  setHospital(
+                    value
+                  );
+
+                } else {
+
+                  setDestinationLocation(
+                    null
+                  );
+
+                  setHospital(
+                    "Custom Destination"
+                  );
+                }
 
               }}
 
@@ -1038,18 +1718,164 @@ function AmbulanceDashboard() {
             >
 
               <option value="City Hospital">
-                City Hospital
+                🏥 City Hospital
               </option>
 
               <option value="Apollo Hospital">
-                Apollo Hospital
+                🏥 Apollo Hospital
               </option>
 
               <option value="Government General Hospital">
-                Government General Hospital
+                🏥 Government General Hospital
+              </option>
+
+              <option value="Hyderabad">
+                📍 Hyderabad
+              </option>
+
+              <option value="Vijayawada">
+                📍 Vijayawada
+              </option>
+
+              <option value="Visakhapatnam">
+                📍 Visakhapatnam
+              </option>
+
+              <option value="Vizianagaram">
+                📍 Vizianagaram
+              </option>
+
+              <option value="Guntur">
+                📍 Guntur
+              </option>
+
+              <option value="Bengaluru">
+                📍 Bengaluru
+              </option>
+
+              {nearbyHospitals.length > 0 && (
+                <>
+                  <option disabled>
+                    ── Nearby Hospitals ──
+                  </option>
+
+                  {nearbyHospitals.map((item) => (
+                    <option
+                      key={item.id}
+                      value={item.id}
+                    >
+                      🏥 {item.name} ({item.distance.toFixed(1)} km)
+                    </option>
+                  ))}
+                </>
+              )}
+
+              <option value="CUSTOM">
+                ✏️ Enter Any Destination
               </option>
 
             </select>
+
+
+            <button
+
+              type="button"
+
+              onClick={findNearbyHospitals}
+
+              style={styles.destinationButton}
+
+              disabled={
+                tripStarted ||
+                nearbyHospitalLoading
+              }
+
+            >
+              {nearbyHospitalLoading
+                ? "🔄 Finding Hospitals..."
+                : "🏥 Find Nearby Hospitals"}
+
+            </button>
+
+            {nearbyHospitalStatus && (
+
+              <div
+                style={styles.destinationStatus}
+              >
+                {nearbyHospitalStatus}
+              </div>
+
+            )}
+
+
+            {destinationSelection === "CUSTOM" && (
+
+              <div>
+
+                <input
+
+                  type="text"
+
+                  value={customDestination}
+
+                  onChange={(e) => {
+                    setCustomDestination(
+                      e.target.value
+                    );
+                    setDestinationStatus(
+                      ""
+                    );
+                  }}
+
+                  placeholder="Example: Vizianagaram, Andhra Pradesh"
+
+                  style={styles.input}
+
+                  disabled={tripStarted}
+
+                />
+
+                <button
+
+                  type="button"
+
+                  onClick={
+                    findCustomDestination
+                  }
+
+                  style={styles.destinationButton}
+
+                  disabled={tripStarted}
+
+                >
+                  🔎 Find Destination
+                </button>
+
+                {destinationStatus && (
+
+                  <div
+                    style={styles.destinationStatus}
+                  >
+                    {destinationStatus}
+                  </div>
+
+                )}
+
+              </div>
+
+            )}
+
+
+            {selectedDestination && (
+
+              <div
+                style={styles.destinationPreview}
+              >
+                📍 <strong>Destination:</strong>{" "}
+                {selectedDestination.name || hospital}
+              </div>
+
+            )}
 
 
             {/* START / END */}
@@ -1187,12 +2013,16 @@ function AmbulanceDashboard() {
 
               <strong>
 
-                {location.latitude !== null &&
-                location.longitude !== null
-
-                  ? `${location.latitude.toFixed(4)}, ${location.longitude.toFixed(4)}`
-
-                  : "Current Location"}
+                {manualStartLocation
+                  ? manualStartLocation.name
+                  : startingPoint === "CURRENT_GPS"
+                    ? (
+                      location.latitude !== null &&
+                      location.longitude !== null
+                        ? `Current GPS (${location.latitude.toFixed(4)}, ${location.longitude.toFixed(4)})`
+                        : "Waiting for GPS..."
+                    )
+                    : selectedStartingPoint.name}
 
               </strong>
 
@@ -1537,6 +2367,47 @@ const styles = {
     background: "white",
     boxSizing: "border-box",
     marginTop: "10px"
+  },
+
+  destinationButton: {
+    width: "100%",
+    marginTop: "10px",
+    padding: "11px",
+    border: "none",
+    borderRadius: "7px",
+    background: "#0f6fae",
+    color: "white",
+    fontSize: "14px",
+    fontWeight: "bold",
+    cursor: "pointer"
+  },
+
+  destinationStatus: {
+    marginTop: "8px",
+    fontSize: "13px",
+    fontWeight: "bold"
+  },
+
+  clearLocationButton: {
+    width: "100%",
+    marginTop: "8px",
+    padding: "10px",
+    border: "1px solid #94a3b8",
+    borderRadius: "7px",
+    background: "#f8fafc",
+    color: "#334155",
+    fontSize: "13px",
+    fontWeight: "bold",
+    cursor: "pointer"
+  },
+
+  destinationPreview: {
+    marginTop: "10px",
+    padding: "10px",
+    background: "#f0f9ff",
+    color: "#075985",
+    borderRadius: "7px",
+    fontSize: "13px"
   },
 
   startButton: {

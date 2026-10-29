@@ -1,116 +1,97 @@
 const mongoose = require("mongoose");
 
-
-// ==========================================
-// JUNCTION ALERT SCHEMA
-// ==========================================
-
-const junctionAlertSchema =
-  new mongoose.Schema(
-    {
-
-      // ======================================
-      // RELATED EMERGENCY TRIP
-      // ======================================
-
-      tripId: {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: "Trip",
-        required: true
-      },
-
-
-      // ======================================
-      // AMBULANCE
-      // ======================================
-
-      ambulanceId: {
-        type: String,
-        required: true
-      },
-
-
-      // ======================================
-      // JUNCTION INFORMATION
-      // ======================================
-
-      junctionName: {
-        type: String,
-        required: true
-      },
-
-
-      latitude: {
-        type: Number,
-        required: true
-      },
-
-
-      longitude: {
-        type: Number,
-        required: true
-      },
-
-
-      // ======================================
-      // DISTANCE FROM AMBULANCE
-      // ======================================
-
-      distanceFromAmbulance: {
-        type: Number,
-        required: true
-      },
-
-
-      // ======================================
-      // ALERT STATUS
-      // ======================================
-
-      status: {
-        type: String,
-
-        enum: [
-          "UPCOMING",
-          "PREPARING",
-          "CLEARED",
-          "PASSED"
-        ],
-
-        default: "UPCOMING"
-      },
-
-
-      // ======================================
-      // PRIORITY
-      // ======================================
-
-      priority: {
-        type: String,
-
-        enum: [
-          "Critical",
-          "Serious",
-          "Moderate"
-        ],
-
-        required: true
-      }
-
+// Police officer assignment schema
+const assignedOfficerSchema = new mongoose.Schema(
+  {
+    officerId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+      required: true
     },
 
-    {
-      timestamps: true
+    status: {
+      type: String,
+      enum: [
+        "ASSIGNED",
+        "ACCEPTED",
+        "CLEARING",
+        "CLEARED",
+        "PASSED"
+      ],
+      default: "ASSIGNED"
+    },
+
+    assignedAt: {
+      type: Date,
+      default: Date.now
+    },
+
+    updatedAt: {
+      type: Date,
+      default: Date.now
     }
+  },
+  { _id: false }
+);
 
-  );
+// Junction alert schema
+const junctionAlertSchema = new mongoose.Schema(
+  {
+    tripId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Trip",
+      required: true
+    },
 
+    ambulanceId: {
+      type: String,
+      required: true
+    },
 
-const JunctionAlert =
-  mongoose.model(
-    "JunctionAlert",
-    junctionAlertSchema
-  );
+    junctionName: {
+      type: String,
+      required: true
+    },
 
+    latitude: {
+      type: Number,
+      required: true
+    },
 
-module.exports =
-  JunctionAlert;
+    longitude: {
+      type: Number,
+      required: true
+    },
+
+    distanceFromAmbulance: {
+      type: Number,
+      required: true
+    },
+
+    status: {
+      type: String,
+      enum: ["UPCOMING", "PREPARING", "CLEARED", "PASSED"],
+      default: "UPCOMING"
+    },
+
+    priority: {
+      type: String,
+      enum: ["Critical", "Serious", "Moderate"],
+      required: true
+    },
+
+    // Multiple police officers can be assigned to a junction
+    assignedOfficers: {
+      type: [assignedOfficerSchema],
+      default: []
+    }
+  },
+  { timestamps: true }
+);
+
+const JunctionAlert = mongoose.model(
+  "JunctionAlert",
+  junctionAlertSchema
+);
+
+module.exports = JunctionAlert;

@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { io } from "socket.io-client";
 import axios from "axios";
 
 import HospitalMap from "../components/HospitalMap";
@@ -8,7 +9,69 @@ function HospitalDashboard() {
 
   const [trips, setTrips] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [message, setMessage] = useState("");
+  // ==========================================
+// REAL-TIME HOSPITAL EMERGENCY ALERTS
+// ==========================================
 
+useEffect(() => {
+
+  const socket = io("http://localhost:5000");
+
+  socket.on("connect", () => {
+
+    console.log(
+      "🔌 Hospital connected to Socket.IO:",
+      socket.id
+    );
+
+    socket.emit("join-hospital");
+
+  });
+
+  socket.on("emergency-alert", (data) => {
+
+    console.log(
+      "🚨 REAL-TIME HOSPITAL EMERGENCY:",
+      data
+    );
+
+    setMessage(
+      data.message ||
+      `🚨 ${data.priority} emergency from ${data.ambulanceId}`
+    );
+
+    setTimeout(() => {
+      setMessage("");
+    }, 8000);
+
+  });
+
+  socket.on("ambulance-location-update", (data) => {
+
+    console.log(
+      "📍 Real-time ambulance location:",
+      data
+    );
+
+  });
+
+  socket.on("connect_error", (error) => {
+
+    console.error(
+      "❌ Hospital Socket.IO connection error:",
+      error.message
+    );
+
+  });
+
+  return () => {
+
+    socket.disconnect();
+
+  };
+
+}, []);
 
   // ==========================================
   // FETCH ACTIVE AMBULANCES
@@ -148,6 +211,25 @@ function HospitalDashboard() {
           padding: "0 25px"
         }}
       >
+        {/* REAL-TIME EMERGENCY ALERT */}
+
+{message && (
+  <div
+    style={{
+      background: "#fee2e2",
+      border: "2px solid #ef4444",
+      color: "#991b1b",
+      padding: "18px 20px",
+      borderRadius: "12px",
+      marginBottom: "25px",
+      fontWeight: "bold",
+      fontSize: "17px",
+      boxShadow: "0 4px 12px rgba(239,68,68,0.15)"
+    }}
+  >
+    🚨 {message}
+  </div>
+)}
 
 
         {/* ===================================== */}
